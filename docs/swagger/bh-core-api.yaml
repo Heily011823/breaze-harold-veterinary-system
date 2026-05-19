@@ -23,11 +23,11 @@ paths:
       tags:
         - Appointments
 
-      summary: Calculate appointment total before appointment creation
+      summary: Validate appointment information before creation
 
       description: >
-        Allows a client or receptionist to calculate the total amount
-        before confirming the appointment.
+        Allows a client or receptionist to validate veterinarian availability
+        and calculate the total amount before continuing to the payment flow.
 
       requestBody:
         required: true
@@ -41,7 +41,7 @@ paths:
       responses:
 
         '200':
-          description: Appointment total calculated successfully
+          description: Appointment validated successfully and ready for payment flow
 
           content:
             application/json:
@@ -51,6 +51,15 @@ paths:
 
         '400':
           description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: Veterinarian schedule conflict detected
 
           content:
             application/json:
@@ -309,6 +318,10 @@ components:
           type: string
           example: COP
 
+        message:
+          type: string
+          example: Appointment validation completed successfully
+
     ClientResponse:
 
       type: object
@@ -471,4 +484,4 @@ components:
 
         message:
           type: string
-          example: One or more services are inactive
+          example: Veterinarian already has an appointment at the selected date and time
