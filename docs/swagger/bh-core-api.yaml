@@ -1,0 +1,120 @@
+openapi: 3.0.0
+
+info:
+  title: BH Core API
+  description: Main API for Breaze & Harold Veterinary System
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Appointments
+    description: Appointment management endpoints
+
+paths:
+
+  /api/appointments/pre-create:
+
+    post:
+      tags:
+        - Appointments
+
+      summary: Calculate appointment total before appointment creation
+
+      description: >
+        Allows a client or receptionist to calculate the total amount
+        before confirming the appointment.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/PreCreateAppointmentRequest'
+
+      responses:
+
+        '200':
+          description: Appointment total calculated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PreCreateAppointmentResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+
+  schemas:
+
+    PreCreateAppointmentRequest:
+
+      type: object
+
+      required:
+        - petId
+        - veterinarianId
+        - appointmentDate
+        - appointmentTime
+        - serviceIds
+
+      properties:
+
+        petId:
+          type: string
+          format: uuid
+
+        veterinarianId:
+          type: string
+          format: uuid
+
+        appointmentDate:
+          type: string
+          format: date
+
+        appointmentTime:
+          type: string
+          example: "14:00"
+
+        serviceIds:
+          type: array
+
+          items:
+            type: string
+            format: uuid
+
+    PreCreateAppointmentResponse:
+
+      type: object
+
+      properties:
+
+        totalAmount:
+          type: number
+          example: 120000
+
+        currency:
+          type: string
+          example: COP
+
+    ErrorResponse:
+
+      type: object
+
+      properties:
+
+        message:
+          type: string
+          example: One or more services are inactive
