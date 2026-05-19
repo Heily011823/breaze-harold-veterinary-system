@@ -1,0 +1,267 @@
+openapi: 3.0.3
+info:
+  title: bh-audit API
+  description: |
+    Servicio de trazabilidad de Breaze & Harold Veterinary System.
+    Recibe y almacena eventos generados por bh-core.
+    No es accesible desde el exterior — solo recibe tráfico interno del clúster.
+  version: 1.0.0
+
+servers:
+  - url: http://bh-audit-service/api/v1
+    description: Servidor interno del clúster Kubernetes
+
+tags:
+  - name: Eventos de Auditoría
+    description: Recepción y consulta de eventos del sistema
+
+paths:
+  /audit/events:
+    post:
+      tags:
+        - Eventos de Auditoría
+      summary: Registrar un evento de auditoría
+      description: |
+        Endpoint interno. Solo bh-core puede llamarlo.
+        Recibe un evento y lo persiste en la base de datos de auditoría.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuditEventDto'
+            example:
+              actionType: LOGIN_SUCCESS
+              userId: "usr-123"
+              userFullName: "Juan Pérez"
+              userRole: VETERINARIAN
+              description: "El usuario inició sesión correctamente"
+              metadata:
+                ip: "192.168.1.1"
+      responses:
+        '201':
+          description: Evento registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventResponse'
+        '400':
+          description: Datos inválidos en el cuerpo de la petición
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Eventos de Auditoría
+      summary: Consultar eventos con filtros
+      description: |
+        Permite al administrador consultar el historial de acciones
+        con filtros opcionales. Usado por bh-core para generar el
+        reporte de historial de acciones en PDF.
+      parameters:
+        - name: actionType
+          in: query
+          required: false
+          description: Tipo de acción a filtrar
+          schema:
+            $ref: '#/components/schemas/ActionType'
+        - name: userId
+          in: query
+          required: false
+          description: ID del usuario que ejecutó la acción
+          schema:
+            type: string
+        - name: userRole
+          in: query
+          required: false
+          description: Rol del usuario
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - name: startDate
+          in: query
+          required: false
+          description: Fecha de inicio del rango (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: "2025-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          required: false
+          description: Fecha de fin del rango (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: "2025-12-31T23:59:59Z"
+        - name: page
+          in: query
+          required: false
+          description: Número de página (empieza en 1)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad de resultados por página
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Lista de eventos de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditEvents'
+        '400':
+          description: Parámetros de consulta inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+
+    ActionType:
+      type: string
+      enum:
+        - USER_REGISTERED
+        - EMAIL_VERIFIED
+        - ACCOUNT_APPROVED_OR_REJECTED
+        - LOGIN_SUCCESS
+        - LOGIN_FAILED
+        - APPOINTMENT_CREATED
+        - APPOINTMENT_STATUS_CHANGED
+        - MEDICAL_RECORD_CREATED
+        - MEDICAL_RECORD_EDITED
+        - VACCINE_REGISTERED
+        - HOSPITALIZATION_STARTED
+        - HOSPITALIZATION_DISCHARGED
+        - INVOICE_CREATED
+        - INVOICE_VOIDED
+        - INVENTORY_ADJUSTED
+        - SERVICE_CREATED_OR_EDITED
+        - SERVICE_DEACTIVATED
+        - APPOINTMENT_PAYMENT_REGISTERED
+        - USER_SUSPENDED
+
+    UserRole:
+      type: string
+      enum:
+        - ADMIN
+        - RECEPTIONIST
+        - VETERINARIAN
+        - CLIENT
+
+    CreateAuditEventDto:
+      type: object
+      required:
+        - actionType
+        - userId
+        - userFullName
+        - userRole
+        - description
+      properties:
+        actionType:
+          $ref: '#/components/schemas/ActionType'
+        userId:
+          type: string
+          description: ID del usuario que ejecutó la acción en bh-core
+          example: "usr-123"
+        userFullName:
+          type: string
+          description: Nombre completo del usuario
+          example: "Juan Pérez"
+        userRole:
+          $ref: '#/components/schemas/UserRole'
+        description:
+          type: string
+          description: Descripción legible de lo que ocurrió
+          example: "El usuario inició sesión correctamente"
+        metadata:
+          type: object
+          description: Información adicional opcional (IP, IDs relacionados, etc.)
+          additionalProperties: true
+          example:
+            ip: "192.168.1.1"
+            appointmentId: "apt-456"
+
+    AuditEventResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        actionType:
+          $ref: '#/components/schemas/ActionType'
+        userId:
+          type: string
+          example: "usr-123"
+        userFullName:
+          type: string
+          example: "Juan Pérez"
+        userRole:
+          $ref: '#/components/schemas/UserRole'
+        description:
+          type: string
+          example: "El usuario inició sesión correctamente"
+        metadata:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-05-18T22:00:00Z"
+
+    PaginatedAuditEvents:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEventResponse'
+        total:
+          type: integer
+          example: 150
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        totalPages:
+          type: integer
+          example: 8
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "actionType debe ser un valor válido"
+        error:
+          type: string
+          example: "Bad Request"
