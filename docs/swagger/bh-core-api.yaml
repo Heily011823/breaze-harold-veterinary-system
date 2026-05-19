@@ -12,6 +12,9 @@ tags:
   - name: Appointments
     description: Appointment management endpoints
 
+  - name: Clients
+    description: Client (pet owner) management endpoints
+
 paths:
 
   /api/appointments/pre-create:
@@ -48,6 +51,203 @@ paths:
 
         '400':
           description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/clients:
+
+    post:
+      tags:
+        - Clients
+
+      summary: Register a new client
+
+      description: >
+        Creates a new client (pet owner) record with their contact information.
+        Typically performed by a receptionist. The action is notified to bh-audit.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+
+      responses:
+
+        '201':
+          description: Client created successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: A client with the same email or document number already exists
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Clients
+
+      summary: List clients
+
+      description: >
+        Returns a paginated list of clients. Supports a free-text search filter
+        applied over firstName, lastName, email and documentNumber.
+
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+
+        - name: search
+          in: query
+          required: false
+          description: Free-text search on firstName, lastName, email, or documentNumber.
+          schema:
+            type: string
+
+      responses:
+
+        '200':
+          description: Clients retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+
+  /api/clients/{id}:
+
+    get:
+      tags:
+        - Clients
+
+      summary: Get a client by id
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Client retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '404':
+          description: Client not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Clients
+
+      summary: Update an existing client
+
+      description: >
+        Updates a client's contact information. The action is notified to bh-audit
+        (Acceptance Criterion 3 of BH-7).
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+
+      responses:
+
+        '200':
+          description: Client updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Client not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: Email or document number already in use by another client
 
           content:
             application/json:
@@ -108,6 +308,160 @@ components:
         currency:
           type: string
           example: COP
+
+    ClientResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        firstName:
+          type: string
+          example: "Juan"
+
+        lastName:
+          type: string
+          example: "Pérez"
+
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+
+        phoneNumber:
+          type: string
+          example: "+57 300 123 4567"
+
+        documentNumber:
+          type: string
+          example: "1053867123"
+
+        address:
+          type: string
+          nullable: true
+          example: "Calle 23 # 45-67"
+
+        city:
+          type: string
+          nullable: true
+          example: "Manizales"
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateClientRequest:
+
+      type: object
+
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+        - documentNumber
+
+      properties:
+
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Juan"
+
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Pérez"
+
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+
+        phoneNumber:
+          type: string
+          example: "+57 300 123 4567"
+
+        documentNumber:
+          type: string
+          example: "1053867123"
+
+        address:
+          type: string
+          example: "Calle 23 # 45-67"
+
+        city:
+          type: string
+          example: "Manizales"
+
+    UpdateClientRequest:
+
+      type: object
+
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+
+      properties:
+
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+        email:
+          type: string
+          format: email
+
+        phoneNumber:
+          type: string
+
+        address:
+          type: string
+
+        city:
+          type: string
+
+    ClientListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/ClientResponse'
+
+        total:
+          type: integer
+          example: 145
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 20
 
     ErrorResponse:
 
