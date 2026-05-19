@@ -148,6 +148,84 @@ paths:
               example:
                 message: Appointment cannot be cancelled because it has already been attended
 
+  /api/appointments/{id}/confirm-payment:
+
+    post:
+      tags:
+        - Appointments
+
+      summary: Confirm appointment payment
+
+      description: >
+        Confirms the payment of an appointment, changes the appointment
+        status to SCHEDULED, sends a confirmation email to the client
+        and notifies bh-audit events.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+
+      responses:
+
+        '200':
+          description: Payment confirmed and appointment scheduled successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ConfirmPaymentResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Payment information is invalid
+
+        '404':
+          description: Appointment not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment not found
+
+        '409':
+          description: Appointment payment has already been confirmed
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment payment has already been confirmed
+
   /api/clients:
 
     post:
@@ -1069,6 +1147,75 @@ components:
         message:
           type: string
           example: Appointment cancelled successfully
+
+    ConfirmPaymentRequest:
+
+      type: object
+
+      required:
+        - paymentMethod
+        - transactionReference
+
+      properties:
+
+        paymentMethod:
+          type: string
+          example: Credit Card
+
+        transactionReference:
+          type: string
+          example: TXN-458712
+
+    ConfirmPaymentResponse:
+
+      type: object
+
+      properties:
+
+        appointmentId:
+          type: string
+          format: uuid
+
+        status:
+          type: string
+          example: Scheduled
+
+        emailSent:
+          type: boolean
+          example: true
+
+        auditNotified:
+          type: boolean
+          example: true
+
+        petName:
+          type: string
+          example: Firulais
+
+        veterinarianName:
+          type: string
+          example: Dr. Carlos Ramírez
+
+        appointmentDate:
+          type: string
+          format: date
+          example: "2026-06-15"
+
+        appointmentTime:
+          type: string
+          example: "14:00"
+
+        clinicAddress:
+          type: string
+          example: Calle 45 #12-34, Manizales
+
+        reminder:
+          type: string
+          example: Please arrive 10 minutes before your appointment
+
+        message:
+          type: string
+          example: Appointment confirmed and email notification sent successfully
 
     ErrorResponse:
 
