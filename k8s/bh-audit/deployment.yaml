@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bh-audit
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bh-audit
+  template:
+    metadata:
+      labels:
+        app: bh-audit
+    spec:
+      containers:
+        - name: bh-audit
+          image: bh-audit:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: bh-audit-config
+                  key: NODE_ENV
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bh-audit-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bh-audit-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: bh-audit-config
+                  key: DB_NAME
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bh-audit-config
+                  key: PORT
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: bh-audit-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bh-audit-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/v1/audit/events
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/audit/events
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
