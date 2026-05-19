@@ -18,6 +18,9 @@ tags:
   - name: Pets
     description: Pet management endpoints
 
+  - name: Medical History
+    description: Medical history query endpoints
+
 paths:
 
   /api/appointments/pre-create:
@@ -944,6 +947,155 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/pets/{petId}/medical-history:
+
+    get:
+      tags:
+        - Medical History
+
+      security:
+        - bearerAuth: []
+
+      summary: List a pet's medical history
+
+      description: >
+        Returns the medical history of a given pet ordered chronologically (most recent first).
+        This endpoint is read-only (BH-11 AC1). Creation and editing of records are handled by
+        the clinical-visit module (BH-17/BH-18/BH-19/BH-20) and the 24h edit window is enforced
+        by BH-21.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can read the history of
+        any pet. Authenticated Clients can only read the history of pets they own; reading
+        another client's pet history returns 403.
+
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+
+      responses:
+
+        '200':
+          description: Medical history retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/MedicalRecordListResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated Client does not own this pet (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Pet not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/medical-records/{id}:
+
+    get:
+      tags:
+        - Medical History
+
+      security:
+        - bearerAuth: []
+
+      summary: Get a single medical record by id
+
+      description: >
+        Returns a single medical record (visit) including its full structure: reason for visit,
+        diagnosis, treatment, recorded pet weight at the time, prescribed medications with dosage
+        and duration, and the suggested next visit date (BH-11 AC2). Read-only endpoint.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can read any record.
+        Authenticated Clients can only read records that belong to pets they own; otherwise 403.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Medical record retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/MedicalRecordResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated Client does not own the pet of this record (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Medical record not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
 
   securitySchemes:
@@ -1465,6 +1617,135 @@ components:
         transactionReference:
           type: string
           example: TXN-458712
+
+    PrescribedMedication:
+
+      type: object
+
+      required:
+        - medicationName
+        - dosage
+
+      properties:
+
+        medicationName:
+          type: string
+          example: "Amoxicilina 250mg"
+
+        dosage:
+          type: string
+          description: Free-text dosage description as written by the veterinarian.
+          example: "1 tableta cada 8 horas"
+
+        durationDays:
+          type: integer
+          minimum: 1
+          nullable: true
+          example: 7
+
+        notes:
+          type: string
+          nullable: true
+          example: "Administrar con comida"
+
+    MedicalRecordResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        petId:
+          type: string
+          format: uuid
+          description: ID of the pet this record belongs to.
+
+        veterinarianId:
+          type: string
+          format: uuid
+          description: ID of the veterinarian who registered the visit.
+
+        appointmentId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked appointment, if the visit was created from one.
+
+        visitDate:
+          type: string
+          format: date-time
+          description: Date and time when the consultation took place.
+
+        visitReason:
+          type: string
+          description: Reason for the visit as stated by the client or recorded by the vet.
+          example: "Vómito y pérdida de apetito durante 2 días"
+
+        diagnosis:
+          type: string
+          description: Veterinarian's diagnosis for the visit.
+          example: "Gastritis leve por cambio de alimento"
+
+        treatment:
+          type: string
+          description: Treatment applied or recommended.
+          example: "Dieta blanda durante 5 días y medicación oral"
+
+        petWeight:
+          type: number
+          format: float
+          minimum: 0
+          description: Pet weight (kg) recorded during the visit (BH-8 AC2 / BH-11 AC2).
+          example: 12.4
+
+        prescribedMedications:
+          type: array
+          description: Medications prescribed during the visit, with their dosage and duration.
+
+          items:
+            $ref: '#/components/schemas/PrescribedMedication'
+
+        nextVisitDate:
+          type: string
+          format: date
+          nullable: true
+          description: Suggested date for the next follow-up visit, if applicable.
+          example: "2026-06-02"
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    MedicalRecordListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/MedicalRecordResponse'
+
+        total:
+          type: integer
+          example: 14
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 20
 
     ErrorResponse:
 
