@@ -154,12 +154,14 @@ paths:
       tags:
         - Appointments
 
-      summary: Confirm appointment payment
+      summary: Process payment and finalize appointment booking
 
       description: >
-        Confirms the payment of an appointment, changes the appointment
-        status to SCHEDULED, sends a confirmation email to the client
-        and notifies bh-audit events.
+        Processes the payment required to finalize an appointment booking.
+        The appointment is only formally created and marked as CONFIRMED
+        after a successful payment transaction. If the payment fails,
+        the appointment must not be registered and the veterinarian
+        schedule remains available.
 
       parameters:
         - name: id
@@ -182,7 +184,7 @@ paths:
       responses:
 
         '200':
-          description: Payment confirmed and appointment scheduled successfully
+          description: Payment processed successfully and appointment created
 
           content:
             application/json:
@@ -215,7 +217,7 @@ paths:
                 message: Appointment not found
 
         '409':
-          description: Appointment payment has already been confirmed
+          description: Appointment could not be created because payment was rejected
 
           content:
             application/json:
@@ -224,7 +226,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
               example:
-                message: Appointment payment has already been confirmed
+                message: Appointment could not be created because payment failed
 
   /api/clients:
 
@@ -1455,6 +1457,14 @@ components:
         message:
           type: string
           example: Appointment confirmed and email notification sent successfully
+
+        paymentStatus:
+          type: string
+          example: APPROVED
+
+        transactionReference:
+          type: string
+          example: TXN-458712
 
     ErrorResponse:
 
