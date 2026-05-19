@@ -70,6 +70,84 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/appointments/{id}/cancel:
+
+    patch:
+      tags:
+        - Appointments
+
+      summary: Cancel an appointment
+
+      description: >
+        Allows a client or receptionist to cancel an appointment
+        before it has been attended by the veterinarian.
+        A cancellation reason is required.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CancelAppointmentRequest'
+
+      responses:
+
+        '200':
+          description: Appointment cancelled successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/AppointmentStatusResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Cancellation reason is required
+
+        '404':
+          description: Appointment not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment not found
+
+        '409':
+          description: Appointment cannot be cancelled because it has already been attended
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment cannot be cancelled because it has already been attended
+
   /api/clients:
 
     post:
@@ -857,6 +935,38 @@ components:
         pageSize:
           type: integer
           example: 20
+
+    CancelAppointmentRequest:
+
+      type: object
+
+      required:
+        - cancellationReason
+
+      properties:
+
+        cancellationReason:
+          type: string
+          minLength: 5
+          example: Client is unable to attend the appointment
+
+    AppointmentStatusResponse:
+
+      type: object
+
+      properties:
+
+        appointmentId:
+          type: string
+          format: uuid
+
+        status:
+          type: string
+          example: Cancelled
+
+        message:
+          type: string
+          example: Appointment cancelled successfully
 
     ErrorResponse:
 
