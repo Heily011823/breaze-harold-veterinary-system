@@ -551,6 +551,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/pets/{id}/status:
+
+    patch:
+      tags:
+        - Pets
+
+      summary: Change a pet's operational status
+
+      description: >
+        Transitions a pet between operational states (state machine of BH-9).
+        Typically invoked by the hospitalization module when a pet is admitted,
+        discharged, or registered as deceased. Direct invocation is restricted
+        to veterinarian or admin roles.
+
+
+        Valid transitions:
+
+        - ACTIVE to HOSPITALIZED (pet admitted for hospitalization, AC2)
+
+        - ACTIVE to DECEASED (exceptional cases without prior admission)
+
+        - HOSPITALIZED to ACTIVE (discharged - recovered, AC3)
+
+        - HOSPITALIZED to DECEASED (discharged - deceased, AC3)
+
+
+        DECEASED is a terminal state and cannot transition to any other.
+        The action is notified to bh-audit.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/ChangePetStatusRequest'
+
+      responses:
+
+        '200':
+          description: Pet status updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+
+        '400':
+          description: Invalid transition (e.g. trying to leave DECEASED or an unsupported pair)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Pet not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: Pet is already in the requested status
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
 
   schemas:
@@ -935,6 +1019,24 @@ components:
         pageSize:
           type: integer
           example: 20
+
+    ChangePetStatusRequest:
+
+      type: object
+
+      required:
+        - status
+
+      properties:
+
+        status:
+          $ref: '#/components/schemas/PetStatus'
+
+        reason:
+          type: string
+          nullable: true
+          description: Optional note describing the reason for the state transition.
+          example: "Admitted for surgery"
 
     CancelAppointmentRequest:
 
