@@ -23,3 +23,50 @@ model MedicalRecord {
   currentWeight   Float
   createdAt       DateTime @default(now())
 }
+
+model Hospitalization {
+  id             String                @id @default(uuid())
+  petId          String
+  veterinarianId String
+  reason         String
+  admissionDate  DateTime              @default(now())
+  dischargeDate  DateTime?
+  status         HospitalizationStatus @default(HOSPITALIZED)
+  exitCondition  ExitCondition?
+  notes          String?
+  evolutionNotes EvolutionNote[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([petId])
+  @@index([veterinarianId])
+}
+
+model EvolutionNote {
+  id                  String          @id @default(uuid())
+  hospitalizationId   String
+  hospitalization     Hospitalization @relation(fields: [hospitalizationId], references: [id], onDelete: Cascade)
+  veterinarianId      String
+  date                DateTime        @default(now())
+  temperature         Float?
+  heartRate           Int?
+  respiratoryRate     Int?
+  weight              Float?
+  clinicalObservation String
+  treatment           String
+  medications         String
+  createdAt           DateTime        @default(now())
+
+  @@index([hospitalizationId])
+}
+
+enum HospitalizationStatus {
+  HOSPITALIZED
+  DISCHARGED
+}
+
+enum ExitCondition {
+  RECOVERED
+  DECEASED
+  TRANSFERRED
+}
