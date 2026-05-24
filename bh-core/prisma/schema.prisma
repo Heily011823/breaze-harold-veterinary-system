@@ -63,6 +63,9 @@ model Invoice {
 
   status InvoiceStatus @default(PENDING)
 
+  cancellationReason String?
+  cancelledAt        DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

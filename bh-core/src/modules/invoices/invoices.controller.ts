@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 
@@ -19,5 +19,10 @@ export class InvoicesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.invoicesService.findOne(id);
+  }
+
+  @Patch(':id/cancel')
+  cancel(@Param('id') id: string, @Body('reason') reason: string) {
+    return this.invoicesService.cancel(id, reason);
   }
 }
