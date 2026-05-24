@@ -1,9 +1,15 @@
+/// Autor: Heily011823
+/// Versión: 0.1
+/// Rama: feature/BH-34-desarrollar-motor-exportacion-facturas-pdf
+/// Descripción: Servicio encargado de gestionar facturas, anulación justificada y exportación individual de facturas en PDF.
+
 import {
   Injectable,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { InvoiceStatus } from '@prisma/client';
+import PDFDocument = require('pdfkit');
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 
@@ -30,7 +36,9 @@ export class InvoicesService {
       const quantity = item.quantity || 1;
 
       if (quantity <= 0) {
-        throw new BadRequestException('La cantidad del ítem debe ser mayor que cero.');
+        throw new BadRequestException(
+          'La cantidad del ítem debe ser mayor que cero.',
+        );
       }
 
       if (item.unitPrice < 0) {
@@ -109,6 +117,95 @@ export class InvoicesService {
     return invoice;
   }
 
+  async generateInvoicePdf(id: string): Promise<Buffer> {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException('Factura no encontrada.');
+    }
+
+    return this.createPdf((doc) => {
+      doc.fontSize(18).text('Breaze & Harold Veterinary System', {
+        align: 'center',
+      });
+
+      doc.fontSize(14).text('Factura de atención veterinaria', {
+        align: 'center',
+      });
+
+      doc.moveDown();
+
+      doc.fontSize(10).text(`Fecha de generación: ${new Date().toLocaleString()}`);
+      doc.fontSize(10).text(`ID de factura: ${invoice.id}`);
+      doc.fontSize(10).text(`Fecha de factura: ${invoice.createdAt.toLocaleString()}`);
+      doc.moveDown();
+
+      doc.fontSize(12).text('Información general');
+      doc.fontSize(10).text(`Cliente: ${invoice.clientId || 'No registrado'}`);
+      doc.fontSize(10).text(`Mascota: ${invoice.petId || 'No registrada'}`);
+      doc.fontSize(10).text(`Cita: ${invoice.appointmentId || 'No registrada'}`);
+      doc.fontSize(10).text(`Estado: ${invoice.status}`);
+      doc.moveDown();
+
+      doc.fontSize(12).text('Detalle de la factura');
+      doc.moveDown(0.5);
+
+      invoice.items.forEach((item, index) => {
+        doc.fontSize(10).text(`${index + 1}. ${item.description}`);
+        doc.fontSize(9).text(`Tipo: ${item.type}`);
+        doc.fontSize(9).text(`Cantidad: ${item.quantity}`);
+        doc.fontSize(9).text(`Precio unitario: ${this.formatCurrency(item.unitPrice)}`);
+        doc.fontSize(9).text(`Total ítem: ${this.formatCurrency(item.total)}`);
+        doc.moveDown(0.5);
+      });
+
+      doc.moveDown();
+
+      doc.fontSize(12).text('Resumen de pago');
+      doc.fontSize(10).text(`Subtotal: ${this.formatCurrency(invoice.subtotal)}`);
+      doc.fontSize(10).text(`Descuento: ${this.formatCurrency(invoice.discount)}`);
+      doc.fontSize(10).text(`Valor pagado: ${this.formatCurrency(invoice.paidAmount)}`);
+      doc.fontSize(10).text(`Total: ${this.formatCurrency(invoice.total)}`);
+      doc.fontSize(10).text(`Saldo: ${this.formatCurrency(invoice.balance)}`);
+      doc.moveDown();
+
+      if (invoice.status === InvoiceStatus.CANCELLED) {
+        doc.fontSize(12).text('Información de anulación');
+        doc
+          .fontSize(10)
+          .text(
+            `Motivo de anulación: ${
+              invoice.cancellationReason || 'No registrado'
+            }`,
+          );
+        doc
+          .fontSize(10)
+          .text(
+            `Fecha de anulación: ${
+              invoice.cancelledAt
+                ? invoice.cancelledAt.toLocaleString()
+                : 'No registrada'
+            }`,
+          );
+        doc.moveDown();
+      }
+
+      doc
+        .fontSize(9)
+        .text(
+          'Este documento es un comprobante generado automáticamente por el sistema B&H.',
+          {
+            align: 'center',
+          },
+        );
+    });
+  }
+
   async cancel(id: string, reason: string) {
     if (!reason || reason.trim().length === 0) {
       throw new BadRequestException(
@@ -142,5 +239,36 @@ export class InvoicesService {
         items: true,
       },
     });
+  }
+
+  private formatCurrency(value: number): string {
+    return `$${value.toLocaleString('es-CO')}`;
+  }
+
+  private async createPdf(
+    contentBuilder:
+      | ((doc: PDFKit.PDFDocument) => void)
+      | ((doc: PDFKit.PDFDocument) => Promise<void>),
+  ): Promise<Buffer> {
+    const doc = new PDFDocument({
+      margin: 50,
+      size: 'A4',
+    });
+
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk) => chunks.push(chunk as Buffer));
+
+    const finished = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+    });
+
+    await contentBuilder(doc);
+
+    doc.end();
+
+    return finished;
   }
 }
