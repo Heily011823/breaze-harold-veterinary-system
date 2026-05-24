@@ -208,9 +208,7 @@ export class ProductsService {
 
     const nextMonth = new Date();
 
-    nextMonth.setMonth(
-      nextMonth.getMonth() + 1,
-    );
+    nextMonth.setMonth(nextMonth.getMonth() + 1,);
 
     return this.prisma.product.findMany({
       where: {
@@ -219,6 +217,10 @@ export class ProductsService {
         expirationDate: {
           lte: nextMonth,
         },
+      },
+
+      orderBy: {
+        expirationDate: 'asc',
       },
     });
   }
