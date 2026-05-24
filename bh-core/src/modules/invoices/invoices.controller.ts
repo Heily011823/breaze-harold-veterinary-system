@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { CancelInvoiceDto } from './dto/cancel-invoice.dto';
 
 @Controller('invoices')
 export class InvoicesController {
@@ -22,7 +24,8 @@ export class InvoicesController {
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string, @Body('reason') reason: string) {
-    return this.invoicesService.cancel(id, reason);
+  @ApiBody({ type: CancelInvoiceDto })
+  cancel(@Param('id') id: string, @Body() cancelInvoiceDto: CancelInvoiceDto) {
+    return this.invoicesService.cancel(id, cancelInvoiceDto.reason);
   }
 }
