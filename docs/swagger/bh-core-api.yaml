@@ -21,6 +21,9 @@ tags:
   - name: Medical History
     description: Medical history query endpoints
 
+  - name: Products
+    description: Product management endpoints
+
 paths:
 
   /api/appointments/pre-create:
@@ -1756,3 +1759,415 @@ components:
         message:
           type: string
           example: Veterinarian already has an appointment at the selected date and time
+  
+paths:
+
+  /api/products:
+
+    post:
+      tags:
+        - Products
+
+      summary: Create a new product
+
+      description: >
+        Creates a new pharmaceutical or medical product
+        with stock, price, expiration date and minimum stock.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+
+      responses:
+
+        '201':
+          description: Product created successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+
+        '400':
+          description: Validation error
+
+    get:
+      tags:
+        - Products
+
+      summary: Get all products
+
+      description: >
+        Returns all active products.
+
+      responses:
+
+        '200':
+          description: Product list retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+  /api/products/{id}:
+
+    get:
+      tags:
+        - Products
+
+      summary: Get product by id
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Product retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+
+        '404':
+          description: Product not found
+
+    put:
+      tags:
+        - Products
+
+      summary: Update product
+
+      description: >
+        Updates product information including stock,
+        price, expiration date and minimum stock.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+
+      responses:
+
+        '200':
+          description: Product updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+
+        '400':
+          description: Validation error
+
+        '404':
+          description: Product not found
+
+    delete:
+      tags:
+        - Products
+
+      summary: Delete product
+
+      description: >
+        Deletes a product from the inventory system.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Product deleted successfully
+
+        '404':
+          description: Product not found
+
+  /api/products/{id}/stock:
+
+    patch:
+      tags:
+        - Products
+
+      summary: Adjust product stock manually
+
+      description: >
+        Updates product inventory manually and registers
+        the inventory adjustment event.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/UpdateStockRequest'
+
+      responses:
+
+        '200':
+          description: Stock adjusted successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+
+        '400':
+          description: Validation error
+
+        '404':
+          description: Product not found
+
+  /api/products/low-stock:
+
+    get:
+      tags:
+        - Products
+
+      summary: Get products below minimum stock
+
+      description: >
+        Returns products with stock below the configured minimum stock limit.
+
+      responses:
+
+        '200':
+          description: Low stock products retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+  /api/products/expiring-soon:
+
+    get:
+      tags:
+        - Products
+
+      summary: Get products close to expiration date
+
+      description: >
+        Returns products that are close to their expiration date.
+
+      responses:
+
+        '200':
+          description: Expiring products retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+components:
+
+  schemas:
+
+    CreateProductRequest:
+
+      type: object
+
+      required:
+        - name
+        - type
+        - stock
+        - unitPrice
+        - expirationDate
+        - minimumStock
+
+      properties:
+
+        name:
+          type: string
+          example: Amoxicillin
+
+        type:
+          type: string
+          example: Medication
+
+        stock:
+          type: integer
+          minimum: 0
+          example: 20
+
+        unitPrice:
+          type: number
+          minimum: 0
+          example: 15000
+
+        expirationDate:
+          type: string
+          format: date
+          example: "2027-12-31"
+
+        minimumStock:
+          type: integer
+          minimum: 0
+          example: 5
+
+    UpdateProductRequest:
+
+      type: object
+
+      properties:
+
+        name:
+          type: string
+
+        type:
+          type: string
+
+        stock:
+          type: integer
+          minimum: 0
+
+        unitPrice:
+          type: number
+          minimum: 0
+
+        expirationDate:
+          type: string
+          format: date
+
+        minimumStock:
+          type: integer
+          minimum: 0
+
+    UpdateStockRequest:
+
+      type: object
+
+      required:
+        - adjustment
+        - reason
+
+      properties:
+
+        adjustment:
+          type: integer
+          example: -5
+
+        reason:
+          type: string
+          example: Manual inventory correction
+
+    ProductResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        name:
+          type: string
+          example: Amoxicillin
+
+        type:
+          type: string
+          example: Medication
+
+        stock:
+          type: integer
+          example: 20
+
+        unitPrice:
+          type: number
+          example: 15000
+
+        expirationDate:
+          type: string
+          format: date
+
+        minimumStock:
+          type: integer
+          example: 5
+
+        isActive:
+          type: boolean
+          example: true
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/ProductResponse'
+
+        total:
+          type: integer
+          example: 20
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 10
