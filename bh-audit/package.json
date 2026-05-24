@@ -74,8 +74,4 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/feature/BH-41-implementar-pipeline-automatizado-integracion-despliegue-continuo
