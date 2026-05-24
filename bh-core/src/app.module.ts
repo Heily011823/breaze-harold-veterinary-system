@@ -5,11 +5,17 @@ import { MedicalRecordsModule } from './modules/medical-records/medical-records.
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './modules/products/products.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
-  imports: [MedicalRecordsModule, PrismaModule, ProductsModule, InvoicesModule],
+  imports: [
+    MedicalRecordsModule,
+    PrismaModule,
+    ProductsModule,
+    InvoicesModule,
+    ReportsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
-
