@@ -1,3 +1,11 @@
-node_modules
-dist
-.env
+# Dependencies
+bh-audit/node_modules/
+bh-core/node_modules/
+
+# Build
+bh-audit/dist/
+bh-core/dist/
+
+# Environment
+bh-audit/.env
+bh-core/.env
