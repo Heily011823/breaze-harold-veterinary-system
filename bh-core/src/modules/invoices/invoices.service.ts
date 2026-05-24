@@ -1,7 +1,7 @@
 /// Autor: Heily011823
 /// Versión: 0.1
-/// Rama: feature/BH-34-desarrollar-motor-exportacion-facturas-pdf
-/// Descripción: Servicio encargado de gestionar facturas, anulación justificada y exportación individual de facturas en PDF.
+/// Rama: feature/BH-32-implementar-aplicacion-descuentos-porcentuales-facturacion
+/// Descripción: Servicio encargado de gestionar facturas, aplicar descuentos porcentuales, anulación justificada y exportación individual de facturas en PDF.
 
 import {
   Injectable,
@@ -26,6 +26,12 @@ export class InvoicesService {
 
     if (discount < 0) {
       throw new BadRequestException('El descuento no puede ser negativo.');
+    }
+
+    if (discount > 100) {
+      throw new BadRequestException(
+        'El descuento porcentual no puede ser mayor al 100%.',
+      );
     }
 
     if (paidAmount < 0) {
@@ -57,7 +63,11 @@ export class InvoicesService {
     });
 
     const subtotal = itemsWithTotals.reduce((sum, item) => sum + item.total, 0);
-    const total = subtotal - discount;
+
+    // El campo discount se interpreta como porcentaje.
+    // Ejemplo: discount = 10 significa 10%.
+    const discountAmount = subtotal * (discount / 100);
+    const total = subtotal - discountAmount;
     const balance = total - paidAmount;
 
     if (total < 0) {
@@ -129,6 +139,8 @@ export class InvoicesService {
       throw new NotFoundException('Factura no encontrada.');
     }
 
+    const discountAmount = invoice.subtotal * (invoice.discount / 100);
+
     return this.createPdf((doc) => {
       doc.fontSize(18).text('Breaze & Harold Veterinary System', {
         align: 'center',
@@ -168,7 +180,8 @@ export class InvoicesService {
 
       doc.fontSize(12).text('Resumen de pago');
       doc.fontSize(10).text(`Subtotal: ${this.formatCurrency(invoice.subtotal)}`);
-      doc.fontSize(10).text(`Descuento: ${this.formatCurrency(invoice.discount)}`);
+      doc.fontSize(10).text(`Descuento aplicado: ${invoice.discount}%`);
+      doc.fontSize(10).text(`Valor descontado: ${this.formatCurrency(discountAmount)}`);
       doc.fontSize(10).text(`Valor pagado: ${this.formatCurrency(invoice.paidAmount)}`);
       doc.fontSize(10).text(`Total: ${this.formatCurrency(invoice.total)}`);
       doc.fontSize(10).text(`Saldo: ${this.formatCurrency(invoice.balance)}`);

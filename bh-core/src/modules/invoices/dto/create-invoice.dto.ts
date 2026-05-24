@@ -1,9 +1,16 @@
+/// Autor: Heily011823
+/// Versión: 0.1
+/// Rama: feature/BH-32-implementar-aplicacion-descuentos-porcentuales-facturacion
+/// Descripción: DTO encargado de validar la información necesaria para crear una factura.
+/// Incluye soporte para aplicar descuentos porcentuales sobre el subtotal de la factura.
+
 import {
   IsArray,
   IsIn,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -43,9 +50,12 @@ export class CreateInvoiceDto {
   @Min(0)
   paidAmount?: number;
 
+  /// Porcentaje de descuento aplicado sobre el subtotal.
+  /// Ejemplo: 10 significa 10%.
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(100)
   discount?: number;
 
   @IsArray()
