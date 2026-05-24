@@ -95,22 +95,19 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Instalar kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.28.0'
+      - name: Instalar kubeconform
+        run: |
+          curl -L -o kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
 
-      - name: Validar manifiestos bh-audit
-        run: kubectl apply --dry-run=client --validate=false -f k8s/bh-audit/
-
-      - name: Validar manifiestos bh-core
-        run: kubectl apply --dry-run=client --validate=false -f k8s/bh-core/
-
-      - name: Validar manifiestos postgres
-        run: kubectl apply --dry-run=client --validate=false -f k8s/postgres/
-
-      - name: Validar Ingress Controller
-        run: kubectl apply --dry-run=client --validate=false -f k8s/ingress-controller.yaml
-
-      - name: Validar Ingress
-        run: kubectl apply --dry-run=client --validate=false -f k8s/ingress.yaml
+      - name: Validar manifiestos Kubernetes
+        run: |
+          if [ -d "k8s" ]; then
+            find k8s -type f \( -name "*.yaml" -o -name "*.yml" \) -print
+            find k8s -type f \( -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 kubeconform -summary -ignore-missing-schemas
+          else
+            echo "No existe la carpeta k8s"
+            exit 1
+          fi

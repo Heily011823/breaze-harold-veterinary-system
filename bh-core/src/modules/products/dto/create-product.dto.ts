@@ -4,36 +4,92 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 
-import {IsDateString, IsInt, IsNotEmpty, IsNumber, IsString, Min,} from 'class-validator';
+import { Type } from 'class-transformer';
+
+import { 
+  IsDateString, 
+  IsInt, 
+  IsNotEmpty, 
+  IsNumber, 
+  IsString, 
+  Min,
+} from 'class-validator';
 
 export class CreateProductDto {
 
-  @ApiProperty({example: 'Amoxicillin', description: 'Product name',})
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({
+    example: 'Amoxicilina',
+    description: 'Nombre del producto',
+  })
+  @IsString({
+    message: 'El nombre debe ser un texto',
+  })
+  @IsNotEmpty({
+    message: 'El nombre es obligatorio',
+  })
   name!: string;
 
-  @ApiProperty({example: 'Medicine', description: 'Product type',})
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({
+    example: 'Medicamento',
+    description: 'Tipo de producto',
+  })
+  @IsString({
+    message: 'El tipo debe ser un texto',
+  })
+  @IsNotEmpty({
+    message: 'El tipo es obligatorio',
+  })
   type!: string;
 
-  @ApiProperty({example: 15, description: 'Available stock quantity',})
-  @IsInt()
-  @Min(0)
+  @ApiProperty({
+    example: 15,
+    description: 'Cantidad disponible en inventario',
+  })
+  @Type(() => Number)
+  @IsInt({
+    message: 'El stock debe ser un número entero',
+  })
+  @Min(0, {
+    message: 'El stock no puede ser negativo',
+  })
   stock!: number;
 
-  @ApiProperty({example: 25000, description: 'Unit price of the product',})
-  @IsNumber()
-  @Min(0)
+  @ApiProperty({
+    example: 25000,
+    description: 'Precio unitario del producto',
+  })
+  @Type(() => Number)
+  @IsNumber(
+    {},
+    {
+      message: 'El precio unitario debe ser un número',
+    },
+  )
+  @Min(0, {
+    message: 'El precio unitario no puede ser negativo',
+  })
   unitPrice!: number;
 
-  @ApiProperty({example: '2027-12-31', description: 'Product expiration date',})
-  @IsDateString()
+  @ApiProperty({
+    example: '2027-12-31',
+    description: 'Fecha de vencimiento del producto',
+  })
+  @IsDateString({}, {
+      message: 'La fecha de vencimiento no es válida',
+    },
+  )
   expirationDate!: string;
 
-  @ApiProperty({example: 5, description: 'Minimum stock allowed',})
-  @IsInt()
-  @Min(0)
+  @ApiProperty({
+    example: 5,
+    description: 'Stock mínimo permitido',
+  })
+  @Type(() => Number)
+  @IsInt({
+    message: 'El stock mínimo debe ser un número entero',
+  })
+  @Min(0, {
+    message: 'El stock mínimo no puede ser negativo',
+  })
   minimumStock!: number;
 }
