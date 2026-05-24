@@ -4,16 +4,32 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 
-import {IsInt, IsNotEmpty, IsString,} from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsString,
+} from 'class-validator';
 
 export class UpdateStockDto {
 
-  @ApiProperty({example: 5, description: 'Stock adjustment amount',})
-  @IsInt()
+  @ApiProperty({
+    example: 5,
+    description: 'Cantidad de ajuste del stock',
+  })
+  @IsInt({
+    message: 'El ajuste debe ser un número entero',
+  })
   adjustment!: number;
 
-  @ApiProperty({example: 'Manual inventory correction', description: 'Reason for stock adjustment',})
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({
+    example: 'Corrección manual de inventario',
+    description: 'Motivo del ajuste de stock',
+  })
+  @IsString({
+    message: 'La razón debe ser un texto',
+  })
+  @IsNotEmpty({
+    message: 'La razón es obligatoria',
+  })
   reason!: string;
 }

@@ -2,7 +2,11 @@
 /// Version: 1.0.0
 /// Rama: feature/BH-26-implementar-administracion-completa-crud-productos
 
-import {Injectable, NotFoundException,} from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 
 import { HttpService } from '@nestjs/axios';
 
@@ -17,18 +21,26 @@ import { UpdateStockDto } from './dto/update-stock.dto';
 @Injectable()
 export class ProductsService {
 
-  constructor(private prisma: PrismaService, private readonly httpService: HttpService,) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly httpService: HttpService,
+  ) {}
 
   async create(dto: CreateProductDto) {
+
     return this.prisma.product.create({
       data: {
         ...dto,
-        expirationDate: new Date(dto.expirationDate),
+
+        expirationDate: new Date(
+          dto.expirationDate,
+        ),
       },
     });
   }
 
   async findAll() {
+
     return this.prisma.product.findMany({
       where: {
         isActive: true,
@@ -38,16 +50,18 @@ export class ProductsService {
 
   async findOne(id: string) {
 
-    const product = await this.prisma.product.findFirst({
-      where: {
-        id,
-        isActive: true,
-      },
-    });
+    const product =
+      await this.prisma.product.findFirst({
+        where: {
+          id,
+          isActive: true,
+        },
+      });
 
     if (!product) {
+
       throw new NotFoundException(
-        'Product not found',
+        'Producto no encontrado',
       );
     }
 
@@ -67,60 +81,99 @@ export class ProductsService {
       data: {
         ...dto,
 
-        expirationDate: dto.expirationDate
-          ? new Date(dto.expirationDate)
-          : undefined,
+        expirationDate:
+          dto.expirationDate
+            ? new Date(dto.expirationDate)
+            : undefined,
       },
     });
   }
 
-  async adjustStock(id: string, dto: UpdateStockDto,) {
+  async adjustStock(
+    id: string,
+    dto: UpdateStockDto,
+  ) {
 
-  const product = await this.prisma.product.findUnique({
-    where: { id },
-  });
+    const product =
+      await this.prisma.product.findUnique({
+        where: { id },
+      });
 
-  if (!product) {
-    throw new NotFoundException(
-      'Product not found',
-    );
-  }
+    if (!product) {
 
-  const updatedProduct =
-    await this.prisma.product.update({
+      throw new NotFoundException(
+        'Producto no encontrado',
+      );
+    }
 
-      where: { id },
+    const newStock =
+      product.stock + dto.adjustment;
 
-      data: {
-        stock:
-          product.stock + dto.adjustment,
-      },
-    });
+    if (newStock < 0) {
 
-  try {
+      throw new BadRequestException(
+        'El stock no puede quedar negativo',
+      );
+    }
 
-    await firstValueFrom(
-      this.httpService.post(
-        'http://bh-audit:3001/audit/events',
-        {
-          event: 'Manual inventory adjustment',
-          productId: id,
-          adjustment: dto.adjustment,
-          reason: dto.reason,
-          timestamp: new Date(),
+    const updatedProduct =
+      await this.prisma.product.update({
+
+        where: { id },
+
+        data: {
+          stock: newStock,
         },
-      ),
-    );
+      });
+
+    try {
+
+  await firstValueFrom(
+    this.httpService.post(
+      'http://localhost:3001/api/v1/audit/events',
+      {
+        actionType: 'INVENTORY_ADJUSTED',
+
+        userId: '1',
+
+        userFullName: 'Maria Paz',
+
+        userRole: 'ADMIN',
+
+        description:
+          'Ajuste manual de inventario',
+
+        metadata: {
+          productId: id,
+
+          adjustment:
+            dto.adjustment,
+
+          reason: dto.reason,
+        },
+      },
+    ),
+  );
 
   } catch (error) {
 
+  if (error instanceof Error) {
+
     console.error(
-      'Could not notify bh-audit microservice',
+      'No se pudo notificar al microservicio bh-audit',
+      error.message,
+    );
+
+  } else {
+
+    console.error(
+      'No se pudo notificar al microservicio bh-audit',
     );
   }
-
-  return updatedProduct;
 }
+
+    return updatedProduct;
+  }
 
   async remove(id: string) {
 
@@ -136,15 +189,19 @@ export class ProductsService {
   }
 
   async findLowStock() {
-    return this.prisma.product.findMany({
-      where: {
-        isActive: true,
 
-        stock: {
-          lte: this.prisma.product.fields.minimumStock,
+    const products =
+      await this.prisma.product.findMany({
+        where: {
+          isActive: true,
         },
-      },
-    });
+      });
+
+    return products.filter(
+      (product) =>
+        product.stock <=
+        product.minimumStock,
+    );
   }
 
   async findExpiringSoon() {
