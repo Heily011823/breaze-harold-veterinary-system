@@ -5,6 +5,8 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+
 jobs:
   # ================================
   # Job 1: Build y push imagen bh-audit
@@ -102,7 +104,8 @@ jobs:
       - name: Configurar kubeconfig
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          printf "%s" "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Aplicar Secrets
         run: |
@@ -114,9 +117,14 @@ jobs:
           kubectl apply -f k8s/bh-audit/configmap.yaml
           kubectl apply -f k8s/bh-core/configmap.yaml
 
-      - name: Aplicar bases de datos
+      - name: Aplicar base de datos PostgreSQL
         run: |
           kubectl apply -f k8s/postgres/
+
+      - name: Aplicar deployments
+        run: |
+          kubectl apply -f k8s/bh-audit/deployment.yaml
+          kubectl apply -f k8s/bh-core/deployment.yaml
 
       - name: Aplicar servicios
         run: |
