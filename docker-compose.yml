@@ -50,8 +50,11 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: bh_core
+      DATABASE_URL: postgresql://postgres:postgres@bh-core-db:5432/bh_core
       PORT: 3000
       BH_AUDIT_URL: http://bh-audit:3001
+      JWT_SECRET: bh_super_secret_key_change_in_production
+      JWT_EXPIRES_IN: 8h
     ports:
       - "3000:3000"
     depends_on:
