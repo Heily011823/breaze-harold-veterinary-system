@@ -53,6 +53,18 @@ model MedicalRecord {
   diagnosis      String
   currentWeight  Float
   createdAt      DateTime @default(now())
+  treatments     Treatment[]  // Relación con tratamientos
+}
+
+model Treatment {
+  id             String   @id @default(uuid())
+  description    String
+  nextVisitDate  DateTime? // Opcional (nullable)
+  medicalRecordId String
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@index([medicalRecordId])
 }
 
 model Product {
