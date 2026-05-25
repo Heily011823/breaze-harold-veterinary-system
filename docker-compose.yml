@@ -50,8 +50,13 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: bh_core
+      DATABASE_URL: postgresql://postgres:postgres@bh-core-db:5432/bh_core
       PORT: 3000
       BH_AUDIT_URL: http://bh-audit:3001
+      JWT_SECRET: bh_super_secret_key_change_in_production
+      JWT_EXPIRES_IN: 8h
+      RESEND_API_KEY: re_MBnsXCWd_KoVDyk62PRQJhR1xB7CBUTFf
+      RESEND_FROM_EMAIL: onboarding@resend.dev
     ports:
       - "3000:3000"
     depends_on:
