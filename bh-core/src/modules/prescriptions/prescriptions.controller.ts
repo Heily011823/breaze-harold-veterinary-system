@@ -9,14 +9,14 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+//import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { PrescriptionsService } from './prescriptions.service';
 
 @ApiTags('Prescriptions')
 @ApiBearerAuth('access-token')
 @Controller('medical-records/:recordId/prescriptions')
-@UseGuards(JwtAuthGuard, RolesGuard) // Comentar si no existen aún
+//@UseGuards(JwtAuthGuard, RolesGuard) // Comentar si no existen aún
 export class PrescriptionsController {
   constructor(private readonly prescriptionsService: PrescriptionsService) {}
 
