@@ -12,15 +12,29 @@ from './dto/create-appointment.dto';
 import { PreCreateAppointmentDto }
 from './dto/pre-create-appointment.dto';
 
-import {AppointmentStatus} 
+import { AppointmentStatus }
 from '@prisma/client';
 
+import { HttpService }
+from '@nestjs/axios';
+
+import { firstValueFrom }
+from 'rxjs';
+
+import { EmailService }
+from '../auth/email/email.service';
+
 @Injectable()
+
 export class AppointmentsService {
 
  constructor(
 
-  private prisma:PrismaService
+  private prisma:PrismaService,
+
+  private httpService:HttpService,
+
+  private emailService:EmailService
 
  ){}
 
@@ -122,33 +136,39 @@ export class AppointmentsService {
 
    );
 
-  return this.prisma.appointment.create({
+  const appointment =
+
+  await this.prisma.appointment.create({
 
    data:{
 
     petId:
-     dto.petId,
+    dto.petId,
 
     veterinarianId:
-     dto.veterinarianId,
+    dto.veterinarianId,
 
     appointmentDate,
 
     total,
 
+    status:
+    AppointmentStatus
+    .PENDING_PAYMENT,
+
     services:{
 
      create:
 
-      dto.serviceIds.map(
+     dto.serviceIds.map(
 
-       id=>({
+      id=>({
 
-        serviceId:id
+       serviceId:id
 
-       })
+      })
 
-      )
+     )
 
     }
 
@@ -162,6 +182,180 @@ export class AppointmentsService {
 
   });
 
+  await this.notifyAudit(
+
+   'Creación de cita',
+
+   appointment.id
+
+  );
+
+  return appointment;
+
+ }
+
+ async confirmPayment(
+
+  appointmentId:string
+
+ ){
+
+  const appointment =
+
+  await this.prisma.appointment.update({
+
+   where:{
+
+    id:appointmentId
+
+   },
+
+   data:{
+
+    status:
+    AppointmentStatus.CONFIRMED
+
+   },
+
+   include:{
+
+    pet:{
+
+     include:{
+
+      client:true
+
+     }
+
+    },
+
+    veterinarian:true
+
+   }
+
+  });
+
+  await this.notifyAudit(
+
+   'Pago de cita registrado',
+
+   appointment.id
+
+  );
+
+  await this.sendAppointmentEmail(
+
+   appointment
+
+  );
+
+  return appointment;
+
+ }
+
+ private async notifyAudit(
+
+  event:string,
+
+  appointmentId:string
+
+ ){
+
+  try{
+
+   await firstValueFrom(
+
+    this.httpService.post(
+
+     'http://localhost:3001/api/v1/audit/events',
+
+     {
+
+      actionType:event,
+
+      userId:'SYSTEM',
+
+      userFullName:'SYSTEM',
+
+      userRole:'SYSTEM',
+
+      description:event,
+
+      metadata:{
+
+       appointmentId
+
+      }
+
+     }
+
+    )
+
+   );
+
+  }catch(error){
+
+   console.error(
+
+    'Error notificando auditoría'
+
+   );
+
+  }
+
+ }
+
+ private async sendAppointmentEmail(
+
+  appointment:any
+
+ ){
+
+  const veterinarian =
+
+  appointment
+  .veterinarian
+  ?.firstName
+
+  ||
+
+  'Veterinario asignado';
+
+  const date =
+
+  new Date(
+
+   appointment
+   .appointmentDate
+
+  ).toLocaleString(
+
+   'es-CO'
+
+  );
+
+  await this.emailService
+  .sendAppointmentConfirmation(
+
+   appointment
+   .pet
+   .client
+   .email,
+
+   appointment
+   .pet
+   .name,
+
+   veterinarian,
+
+   date,
+
+   'Sede Principal',
+
+   'Recuerda llegar 10 minutos antes'
+
+  );
+
  }
 
  async preCreate(
@@ -171,21 +365,21 @@ export class AppointmentsService {
  ){
 
   const services =
-   await this.prisma.service.findMany({
+  await this.prisma.service.findMany({
 
-    where:{
+   where:{
 
-     id:{
+    id:{
 
-      in:dto.serviceIds
+     in:dto.serviceIds
 
-     },
+    },
 
-     isActive:true
+    isActive:true
 
-    }
+   }
 
-   });
+  });
 
   if(
 
@@ -204,34 +398,36 @@ export class AppointmentsService {
   }
 
   const total =
-   services.reduce(
 
-    (sum,item)=>
+  services.reduce(
 
-     sum+
-     item.price,
+   (sum,item)=>
 
-    0
+   sum+
+   item.price,
 
-   );
+   0
+
+  );
 
   return{
 
    petId:
-    dto.petId,
+   dto.petId,
 
    veterinarianId:
-    dto.veterinarianId,
+   dto.veterinarianId,
 
    appointmentDate:
-    dto.appointmentDate,
+   dto.appointmentDate,
 
    services,
 
    total,
 
    status:
-    'READY_TO_CONFIRM'
+
+   'READY_TO_CONFIRM'
 
   };
 

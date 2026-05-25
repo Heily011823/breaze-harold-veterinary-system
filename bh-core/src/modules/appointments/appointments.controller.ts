@@ -1,7 +1,9 @@
 import {
  Body,
  Controller,
- Post
+ Post,
+ Patch,
+ Param
 } from '@nestjs/common';
 
 import {
@@ -17,7 +19,8 @@ import {
 } from './dto/pre-create-appointment.dto';
 
 @Controller('appointments')
-export class AppointmentsController{
+
+export class AppointmentsController {
 
  constructor(
 
@@ -36,7 +39,9 @@ export class AppointmentsController{
  ){
 
   return this.service.create(
+
    dto
+
   );
 
  }
@@ -51,7 +56,28 @@ export class AppointmentsController{
  ){
 
   return this.service.preCreate(
+
    dto
+
+  );
+
+ }
+
+ @Patch(':id/payment')
+
+ confirmPayment(
+
+  @Param('id')
+
+  id:string
+
+ ){
+
+  return this.service
+  .confirmPayment(
+
+   id
+
   );
 
  }

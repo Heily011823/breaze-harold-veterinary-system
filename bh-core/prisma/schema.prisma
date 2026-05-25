@@ -40,6 +40,7 @@ model User {
   createdAt                 DateTime      @default(now())
   updatedAt                 DateTime      @updatedAt
   client                    Client?
+  appointments Appointment[]
 
   @@map("users")
 }
@@ -133,6 +134,10 @@ model Appointment {
   petId String
 
   veterinarianId String
+
+  pet Pet @relation(fields:[petId],references:[id])
+
+  veterinarian User @relation(fields:[veterinarianId],references:[id])
 
   appointmentDate DateTime
 
@@ -249,6 +254,7 @@ model Pet {
   status    PetStatus @default(ACTIVE)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  appointments Appointment[]
 
   @@map("pets")
 }
