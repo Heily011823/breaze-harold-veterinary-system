@@ -98,4 +98,4 @@ jobs:
         run: kubeconform -strict k8s/postgres/
 
       - name: Validar Ingress
-        run: kubeconform -strict k8s/ingress.yaml  
+        run: kubeconform -strict k8s/ingress.yaml
