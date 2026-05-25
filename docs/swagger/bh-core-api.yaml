@@ -1,0 +1,1758 @@
+openapi: 3.0.0
+
+info:
+  title: BH Core API
+  description: Main API for Breaze & Harold Veterinary System
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Appointments
+    description: Appointment management endpoints
+
+  - name: Clients
+    description: Client (pet owner) management endpoints
+
+  - name: Pets
+    description: Pet management endpoints
+
+  - name: Medical History
+    description: Medical history query endpoints
+
+paths:
+
+  /api/appointments/pre-create:
+
+    post:
+      tags:
+        - Appointments
+
+      summary: Validate appointment information before creation
+
+      description: >
+        Allows a client or receptionist to validate veterinarian availability
+        and calculate the total amount before continuing to the payment flow.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/PreCreateAppointmentRequest'
+
+      responses:
+
+        '200':
+          description: Appointment validated successfully and ready for payment flow
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PreCreateAppointmentResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: Veterinarian schedule conflict detected
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/appointments/{id}/cancel:
+
+    patch:
+      tags:
+        - Appointments
+
+      summary: Cancel an appointment
+
+      description: >
+        Allows a client or receptionist to cancel an appointment
+        before it has been attended by the veterinarian.
+        A cancellation reason is required.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CancelAppointmentRequest'
+
+      responses:
+
+        '200':
+          description: Appointment cancelled successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/AppointmentStatusResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Cancellation reason is required
+
+        '404':
+          description: Appointment not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment not found
+
+        '409':
+          description: Appointment cannot be cancelled because it has already been attended
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment cannot be cancelled because it has already been attended
+
+  /api/appointments/{id}/confirm-payment:
+
+    post:
+      tags:
+        - Appointments
+
+      summary: Process payment and finalize appointment booking
+
+      description: >
+        Processes the payment required to finalize an appointment booking.
+        The appointment is only formally created and marked as CONFIRMED
+        after a successful payment transaction. If the payment fails,
+        the appointment must not be registered and the veterinarian
+        schedule remains available.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+
+      responses:
+
+        '200':
+          description: Payment processed successfully and appointment created
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ConfirmPaymentResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Payment information is invalid
+
+        '404':
+          description: Appointment not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment not found
+
+        '409':
+          description: Appointment could not be created because payment was rejected
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+              example:
+                message: Appointment could not be created because payment failed
+
+  /api/clients:
+
+    post:
+      tags:
+        - Clients
+
+      security:
+        - bearerAuth: []
+
+      summary: Register a new client
+
+      description: >
+        Creates a new client (pet owner) record with their contact information.
+        Typically performed by a receptionist. The action is notified to bh-audit.
+
+        Authorization (BH-10): only Receptionist and Admin roles may create clients.
+        Authenticated Clients receive 403.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+
+      responses:
+
+        '201':
+          description: Client created successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated user role is not allowed to create clients
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: A client with the same email or document number already exists
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Clients
+
+      security:
+        - bearerAuth: []
+
+      summary: List clients
+
+      description: >
+        Returns a paginated list of clients. Supports a free-text search filter
+        applied over firstName, lastName, email and documentNumber.
+
+        Authorization (BH-10): only Receptionist and Admin roles may list all clients.
+        Authenticated Clients receive 403 (a client cannot enumerate other clients).
+
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+
+        - name: search
+          in: query
+          required: false
+          description: Free-text search on firstName, lastName, email, or documentNumber.
+          schema:
+            type: string
+
+      responses:
+
+        '200':
+          description: Clients retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated user role is not allowed to list clients
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/clients/{id}:
+
+    get:
+      tags:
+        - Clients
+
+      security:
+        - bearerAuth: []
+
+      summary: Get a client by id
+
+      description: >
+        Returns the client record matching the given id.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can read any client.
+        Authenticated Clients can only read their own profile; reading another
+        client's profile returns 403.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Client retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - client trying to read another client's profile (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Client not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Clients
+
+      security:
+        - bearerAuth: []
+
+      summary: Update an existing client
+
+      description: >
+        Updates a client's contact information. The action is notified to bh-audit
+        (Acceptance Criterion 3 of BH-7).
+
+        Authorization (BH-10): Receptionist and Admin can update any client.
+        Authenticated Clients can only update their own profile; updating another
+        client's profile returns 403. Veterinarian role cannot update client data.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+
+      responses:
+
+        '200':
+          description: Client updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated user is not allowed to update this client (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Client not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: Email or document number already in use by another client
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/pets:
+
+    post:
+      tags:
+        - Pets
+
+      security:
+        - bearerAuth: []
+
+      summary: Register a new pet
+
+      description: >
+        Creates a new pet record linked to an existing client. Newly created pets
+        start with status ACTIVE by default. The action is notified to bh-audit.
+
+        Authorization (BH-10): only Receptionist and Admin roles may register pets.
+        Authenticated Clients receive 403.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CreatePetRequest'
+
+      responses:
+
+        '201':
+          description: Pet created successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated user role is not allowed to register pets
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Referenced client (clientId) does not exist
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Pets
+
+      security:
+        - bearerAuth: []
+
+      summary: List pets
+
+      description: >
+        Returns a paginated list of pets. Can be filtered by client, status
+        and a free-text search applied over name and breed.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can list any pets.
+        Authenticated Clients receive an automatically scoped result that contains only
+        their own pets, regardless of the clientId filter sent. Passing another
+        client's clientId as a Client results in 403.
+
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+
+        - name: clientId
+          in: query
+          required: false
+          description: Filter pets by owner.
+          schema:
+            type: string
+            format: uuid
+
+        - name: status
+          in: query
+          required: false
+          description: Filter pets by operational status.
+          schema:
+            $ref: '#/components/schemas/PetStatus'
+
+        - name: search
+          in: query
+          required: false
+          description: Free-text search on name or breed.
+          schema:
+            type: string
+
+      responses:
+
+        '200':
+          description: Pets retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PetListResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - a Client tried to filter by another client's id (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/pets/{id}:
+
+    get:
+      tags:
+        - Pets
+
+      security:
+        - bearerAuth: []
+
+      summary: Get a pet by id
+
+      description: >
+        Returns the pet record matching the given id.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can read any pet
+        (AC3 - operational roles). Authenticated Clients can only read pets they own;
+        attempting to read another client's pet returns 403 (AC2). When the pet is
+        owned by the requesting client, the response is granted normally (AC1).
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Pet retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated Client does not own this pet (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Pet not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Pets
+
+      security:
+        - bearerAuth: []
+
+      summary: Update a pet's basic information
+
+      description: >
+        Updates the mutable fields of a pet (name, breed, color, weight).
+        Species, birthDate and clientId cannot be modified after creation.
+        Status transitions are handled by the hospitalization flow, not this endpoint.
+        Weight updates here also satisfy AC2 of BH-8 when triggered from a clinical visit.
+        The action is notified to bh-audit.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can update any pet.
+        Authenticated Clients cannot update pet records directly (returns 403).
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/UpdatePetRequest'
+
+      responses:
+
+        '200':
+          description: Pet updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+
+        '400':
+          description: Validation error
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated user role is not allowed to update pets
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Pet not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/pets/{id}/status:
+
+    patch:
+      tags:
+        - Pets
+
+      security:
+        - bearerAuth: []
+
+      summary: Change a pet's operational status
+
+      description: >
+        Transitions a pet between operational states (state machine of BH-9).
+        Typically invoked by the hospitalization module when a pet is admitted,
+        discharged, or registered as deceased. Direct invocation is restricted
+        to veterinarian or admin roles.
+
+
+        Valid transitions:
+
+        - ACTIVE to HOSPITALIZED (pet admitted for hospitalization, AC2)
+
+        - ACTIVE to DECEASED (exceptional cases without prior admission)
+
+        - HOSPITALIZED to ACTIVE (discharged - recovered, AC3)
+
+        - HOSPITALIZED to DECEASED (discharged - deceased, AC3)
+
+
+        DECEASED is a terminal state and cannot transition to any other.
+        The action is notified to bh-audit.
+
+
+        Authorization (BH-10): only Veterinarian and Admin roles may change pet status.
+        Receptionist and Client receive 403.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/ChangePetStatusRequest'
+
+      responses:
+
+        '200':
+          description: Pet status updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+
+        '400':
+          description: Invalid transition (e.g. trying to leave DECEASED or an unsupported pair)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - only Veterinarian and Admin may change pet status
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Pet not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '409':
+          description: Pet is already in the requested status
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/pets/{petId}/medical-history:
+
+    get:
+      tags:
+        - Medical History
+
+      security:
+        - bearerAuth: []
+
+      summary: List a pet's medical history
+
+      description: >
+        Returns the medical history of a given pet ordered chronologically (most recent first).
+        This endpoint is read-only (BH-11 AC1). Creation and editing of records are handled by
+        the clinical-visit module (BH-17/BH-18/BH-19/BH-20) and the 24h edit window is enforced
+        by BH-21.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can read the history of
+        any pet. Authenticated Clients can only read the history of pets they own; reading
+        another client's pet history returns 403.
+
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+
+      responses:
+
+        '200':
+          description: Medical history retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/MedicalRecordListResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated Client does not own this pet (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Pet not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/medical-records/{id}:
+
+    get:
+      tags:
+        - Medical History
+
+      security:
+        - bearerAuth: []
+
+      summary: Get a single medical record by id
+
+      description: >
+        Returns a single medical record (visit) including its full structure: reason for visit,
+        diagnosis, treatment, recorded pet weight at the time, prescribed medications with dosage
+        and duration, and the suggested next visit date (BH-11 AC2). Read-only endpoint.
+
+        Authorization (BH-10): Receptionist, Veterinarian and Admin can read any record.
+        Authenticated Clients can only read records that belong to pets they own; otherwise 403.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Medical record retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/MedicalRecordResponse'
+
+        '401':
+          description: Authentication required (missing or invalid token)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden - the authenticated Client does not own the pet of this record (BH-10 AC2)
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Medical record not found
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT-based authentication. The token must be sent in the Authorization header
+        as "Bearer <token>". The token carries the user role (Client, Receptionist,
+        Veterinarian, Admin) which is used by the authorization rules described per endpoint.
+
+  schemas:
+
+    PreCreateAppointmentRequest:
+
+      type: object
+
+      required:
+        - petId
+        - veterinarianId
+        - appointmentDate
+        - appointmentTime
+        - serviceIds
+
+      properties:
+
+        petId:
+          type: string
+          format: uuid
+
+        veterinarianId:
+          type: string
+          format: uuid
+
+        appointmentDate:
+          type: string
+          format: date
+
+        appointmentTime:
+          type: string
+          example: "14:00"
+
+        serviceIds:
+          type: array
+
+          items:
+            type: string
+            format: uuid
+
+    PreCreateAppointmentResponse:
+
+      type: object
+
+      properties:
+
+        totalAmount:
+          type: number
+          example: 120000
+
+        currency:
+          type: string
+          example: COP
+
+        message:
+          type: string
+          example: Appointment validation completed successfully
+
+    ClientResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        firstName:
+          type: string
+          example: "Juan"
+
+        lastName:
+          type: string
+          example: "Pérez"
+
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+
+        phoneNumber:
+          type: string
+          example: "+57 300 123 4567"
+
+        documentNumber:
+          type: string
+          example: "1053867123"
+
+        address:
+          type: string
+          nullable: true
+          example: "Calle 23 # 45-67"
+
+        city:
+          type: string
+          nullable: true
+          example: "Manizales"
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateClientRequest:
+
+      type: object
+
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+        - documentNumber
+
+      properties:
+
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Juan"
+
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Pérez"
+
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+
+        phoneNumber:
+          type: string
+          example: "+57 300 123 4567"
+
+        documentNumber:
+          type: string
+          example: "1053867123"
+
+        address:
+          type: string
+          example: "Calle 23 # 45-67"
+
+        city:
+          type: string
+          example: "Manizales"
+
+    UpdateClientRequest:
+
+      type: object
+
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+
+      properties:
+
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+        email:
+          type: string
+          format: email
+
+        phoneNumber:
+          type: string
+
+        address:
+          type: string
+
+        city:
+          type: string
+
+    ClientListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/ClientResponse'
+
+        total:
+          type: integer
+          example: 145
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 20
+
+    PetStatus:
+
+      type: string
+
+      enum:
+        - ACTIVE
+        - HOSPITALIZED
+        - DECEASED
+
+      example: ACTIVE
+
+      description: >
+        Current operational state of the pet. ACTIVE is the default for newly
+        registered pets. Transitions to HOSPITALIZED and DECEASED are driven by
+        the hospitalization module, not by direct edits.
+
+    PetResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        clientId:
+          type: string
+          format: uuid
+          description: ID of the owning client.
+
+        name:
+          type: string
+          example: "Firulais"
+
+        species:
+          type: string
+          example: "Perro"
+
+        breed:
+          type: string
+          example: "Golden Retriever"
+
+        color:
+          type: string
+          example: "Dorado"
+
+        birthDate:
+          type: string
+          format: date
+          example: "2020-03-15"
+
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          example: 25.5
+          description: Last recorded weight in kilograms.
+
+        status:
+          $ref: '#/components/schemas/PetStatus'
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePetRequest:
+
+      type: object
+
+      required:
+        - clientId
+        - name
+        - species
+        - breed
+        - color
+        - birthDate
+        - weight
+
+      properties:
+
+        clientId:
+          type: string
+          format: uuid
+          description: ID of the owning client. Must reference an existing client.
+
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "Firulais"
+
+        species:
+          type: string
+          example: "Perro"
+
+        breed:
+          type: string
+          example: "Golden Retriever"
+
+        color:
+          type: string
+          example: "Dorado"
+
+        birthDate:
+          type: string
+          format: date
+          example: "2020-03-15"
+
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          example: 25.5
+          description: Initial weight in kilograms.
+
+    UpdatePetRequest:
+
+      type: object
+
+      required:
+        - name
+        - breed
+        - color
+        - weight
+
+      properties:
+
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+
+        breed:
+          type: string
+
+        color:
+          type: string
+
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          description: Pet weight in kilograms. Updated whenever the pet is attended (BH-8 AC2).
+
+    PetListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/PetResponse'
+
+        total:
+          type: integer
+          example: 73
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 20
+
+    ChangePetStatusRequest:
+
+      type: object
+
+      required:
+        - status
+
+      properties:
+
+        status:
+          $ref: '#/components/schemas/PetStatus'
+
+        reason:
+          type: string
+          nullable: true
+          description: Optional note describing the reason for the state transition.
+          example: "Admitted for surgery"
+
+    CancelAppointmentRequest:
+
+      type: object
+
+      required:
+        - cancellationReason
+
+      properties:
+
+        cancellationReason:
+          type: string
+          minLength: 5
+          example: Client is unable to attend the appointment
+
+    AppointmentStatusResponse:
+
+      type: object
+
+      properties:
+
+        appointmentId:
+          type: string
+          format: uuid
+
+        status:
+          type: string
+          example: Cancelled
+
+        message:
+          type: string
+          example: Appointment cancelled successfully
+
+    ConfirmPaymentRequest:
+
+      type: object
+
+      required:
+        - paymentMethod
+        - transactionReference
+
+      properties:
+
+        paymentMethod:
+          type: string
+          example: Credit Card
+
+        transactionReference:
+          type: string
+          example: TXN-458712
+
+    ConfirmPaymentResponse:
+
+      type: object
+
+      properties:
+
+        appointmentId:
+          type: string
+          format: uuid
+
+        status:
+          type: string
+          example: Scheduled
+
+        emailSent:
+          type: boolean
+          example: true
+
+        auditNotified:
+          type: boolean
+          example: true
+
+        petName:
+          type: string
+          example: Firulais
+
+        veterinarianName:
+          type: string
+          example: Dr. Carlos Ramírez
+
+        appointmentDate:
+          type: string
+          format: date
+          example: "2026-06-15"
+
+        appointmentTime:
+          type: string
+          example: "14:00"
+
+        clinicAddress:
+          type: string
+          example: Calle 45 #12-34, Manizales
+
+        reminder:
+          type: string
+          example: Please arrive 10 minutes before your appointment
+
+        message:
+          type: string
+          example: Appointment confirmed and email notification sent successfully
+
+        paymentStatus:
+          type: string
+          example: APPROVED
+
+        transactionReference:
+          type: string
+          example: TXN-458712
+
+    PrescribedMedication:
+
+      type: object
+
+      required:
+        - medicationName
+        - dosage
+
+      properties:
+
+        medicationName:
+          type: string
+          example: "Amoxicilina 250mg"
+
+        dosage:
+          type: string
+          description: Free-text dosage description as written by the veterinarian.
+          example: "1 tableta cada 8 horas"
+
+        durationDays:
+          type: integer
+          minimum: 1
+          nullable: true
+          example: 7
+
+        notes:
+          type: string
+          nullable: true
+          example: "Administrar con comida"
+
+    MedicalRecordResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        petId:
+          type: string
+          format: uuid
+          description: ID of the pet this record belongs to.
+
+        veterinarianId:
+          type: string
+          format: uuid
+          description: ID of the veterinarian who registered the visit.
+
+        appointmentId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked appointment, if the visit was created from one.
+
+        visitDate:
+          type: string
+          format: date-time
+          description: Date and time when the consultation took place.
+
+        visitReason:
+          type: string
+          description: Reason for the visit as stated by the client or recorded by the vet.
+          example: "Vómito y pérdida de apetito durante 2 días"
+
+        diagnosis:
+          type: string
+          description: Veterinarian's diagnosis for the visit.
+          example: "Gastritis leve por cambio de alimento"
+
+        treatment:
+          type: string
+          description: Treatment applied or recommended.
+          example: "Dieta blanda durante 5 días y medicación oral"
+
+        petWeight:
+          type: number
+          format: float
+          minimum: 0
+          description: Pet weight (kg) recorded during the visit (BH-8 AC2 / BH-11 AC2).
+          example: 12.4
+
+        prescribedMedications:
+          type: array
+          description: Medications prescribed during the visit, with their dosage and duration.
+
+          items:
+            $ref: '#/components/schemas/PrescribedMedication'
+
+        nextVisitDate:
+          type: string
+          format: date
+          nullable: true
+          description: Suggested date for the next follow-up visit, if applicable.
+          example: "2026-06-02"
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    MedicalRecordListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/MedicalRecordResponse'
+
+        total:
+          type: integer
+          example: 14
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 20
+
+    ErrorResponse:
+
+      type: object
+
+      properties:
+
+        message:
+          type: string
+          example: Veterinarian already has an appointment at the selected date and time

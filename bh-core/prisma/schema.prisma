@@ -1,0 +1,25 @@
+
+
+/// Autor: Mateo Quintero
+/// Version: 0.1
+/// rama: 17-el registro de consultas
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model MedicalRecord {
+  id              String   @id @default(uuid())
+  petId           String
+  veterinarianId  String
+  visitReason     String
+  diagnosis       String
+  currentWeight   Float
+  createdAt       DateTime @default(now())
+}
