@@ -1,17 +1,21 @@
+/// Autor: milerickhenaor-alt
+/// Version: 0.1
+/// Rama: BH-22-desarrollar-proceso-internacion-medica-mascotas
+
 import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateHospitalizationDto {
   @IsUUID()
   @IsNotEmpty()
-  petId: string;
+  petId!: string;
 
   @IsUUID()
   @IsNotEmpty()
-  veterinarianId: string;
+  veterinarianId!: string;
 
   @IsString()
   @IsNotEmpty()
-  reason: string;
+  reason!: string;
 
   @IsString()
   @IsOptional()

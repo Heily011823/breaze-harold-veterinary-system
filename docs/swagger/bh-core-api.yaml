@@ -24,6 +24,9 @@ tags:
   - name: Products
     description: Product management endpoints
 
+  - name: Services
+    description: Veterinary medical services management endpoints
+
 paths:
 
   /api/appointments/pre-create:
@@ -2163,6 +2166,265 @@ components:
         total:
           type: integer
           example: 20
+
+
+  /api/services:
+
+    post:
+      tags:
+        - Services
+
+      summary: Create a new medical service
+
+      description: >
+        Creates a new veterinary medical service
+        such as consultations, surgeries or vaccinations.
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/CreateServiceRequest'
+
+      responses:
+
+        '201':
+          description: Service created successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+
+        '400':
+          description: Validation error
+
+    get:
+      tags:
+        - Services
+
+      summary: Get all active services
+
+      description: >
+        Returns all active veterinary services.
+
+      responses:
+
+        '200':
+          description: Service list retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ServiceListResponse'
+
+
+  /api/services/{id}:
+
+    get:
+      tags:
+        - Services
+
+      summary: Get service by id
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Service retrieved successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+
+        '404':
+          description: Service not found
+
+    put:
+      tags:
+        - Services
+
+      summary: Update service
+
+      description: >
+        Updates service information including
+        name, description and price.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+
+            schema:
+              $ref: '#/components/schemas/UpdateServiceRequest'
+
+      responses:
+
+        '200':
+          description: Service updated successfully
+
+          content:
+            application/json:
+
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+
+        '400':
+          description: Validation error
+
+        '404':
+          description: Service not found
+
+    delete:
+      tags:
+        - Services
+
+      summary: Deactivate service
+
+      description: >
+        Marks a service as inactive instead of deleting it,
+        preserving historical appointment and invoice records.
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        '200':
+          description: Service deactivated successfully
+
+        '404':
+          description: Service not found
+
+
+        page:
+          type: integer
+          example: 1
+
+        pageSize:
+          type: integer
+          example: 10
+
+    CreateServiceRequest:
+
+      type: object
+
+      required:
+        - name
+        - description
+        - price
+
+      properties:
+
+        name:
+          type: string
+          example: General Consultation
+
+        description:
+          type: string
+          example: Basic veterinary medical consultation
+
+        price:
+          type: number
+          minimum: 0
+          example: 80000
+
+    UpdateServiceRequest:
+
+      type: object
+
+      properties:
+
+        name:
+          type: string
+
+        description:
+          type: string
+
+        price:
+          type: number
+          minimum: 0
+
+    ServiceResponse:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+          format: uuid
+
+        name:
+          type: string
+          example: General Consultation
+
+        description:
+          type: string
+          example: Basic veterinary medical consultation
+
+        price:
+          type: number
+          example: 80000
+
+        isActive:
+          type: boolean
+          example: true
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    ServiceListResponse:
+
+      type: object
+
+      properties:
+
+        data:
+          type: array
+
+          items:
+            $ref: '#/components/schemas/ServiceResponse'
+
+        total:
+          type: integer
+          example: 10
 
         page:
           type: integer

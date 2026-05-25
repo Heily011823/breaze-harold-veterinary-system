@@ -23,7 +23,10 @@ export class HospitalizationsController {
   }
 
   @Post(':id/evolution-notes')
-  createEvolutionNote(@Param('id') id: string, @Body() dto: CreateEvolutionNoteDto) {
+  createEvolutionNote(
+    @Param('id') id: string,
+    @Body() dto: CreateEvolutionNoteDto,
+  ) {
     return this.hospitalizationsService.createEvolutionNote(id, dto);
   }
 

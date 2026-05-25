@@ -2,7 +2,11 @@
 /// Version: 0.1
 /// Rama: BH-24-desarrollar-registro-mandatorio-notas-evolucion-diaria
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateHospitalizationDto } from './dto/create-hospitalization.dto';
 import { DischargeHospitalizationDto } from './dto/discharge-hospitalization.dto';
@@ -67,7 +71,9 @@ export class HospitalizationsService {
     }
 
     if (hospitalization.status === 'DISCHARGED') {
-      throw new BadRequestException('Cannot add evolution notes to a discharged hospitalization');
+      throw new BadRequestException(
+        'Cannot add evolution notes to a discharged hospitalization',
+      );
     }
 
     return this.prisma.evolutionNote.create({
