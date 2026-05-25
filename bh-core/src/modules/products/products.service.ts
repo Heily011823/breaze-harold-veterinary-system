@@ -190,18 +190,13 @@ export class ProductsService {
 
   async findLowStock() {
 
-    const products =
-      await this.prisma.product.findMany({
-        where: {
-          isActive: true,
-        },
-      });
+    const products = await this.prisma.product.findMany({
+      where: {
+        isActive: true,
+      },
+    });
 
-    return products.filter(
-      (product) =>
-        product.stock <=
-        product.minimumStock,
-    );
+    return products.filter((product) => product.stock <= product.minimumStock,);
   }
 
   async findExpiringSoon() {
