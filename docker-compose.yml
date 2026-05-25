@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # ================================
+  # Base de datos de bh-core
+  # ================================
+  bh-core-db:
+    image: postgres:15-alpine
+    container_name: bh-core-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bh_core
+    ports:
+      - "5432:5432"
+    volumes:
+      - bh-core-db-data:/var/lib/postgresql/data
+    networks:
+      - bh-network
+
+  # ================================
+  # Base de datos de bh-audit
+  # ================================
+  bh-audit-db:
+    image: postgres:15-alpine
+    container_name: bh-audit-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bh_audit
+    ports:
+      - "5433:5432"
+    volumes:
+      - bh-audit-db-data:/var/lib/postgresql/data
+    networks:
+      - bh-network
+
+  # ================================
+  # Servicio bh-core
+  # ================================
+  bh-core:
+    build:
+      context: ./bh-core
+      target: development
+    container_name: bh-core
+    environment:
+      NODE_ENV: development
+      DB_HOST: bh-core-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: bh_core
+      PORT: 3000
+      BH_AUDIT_URL: http://bh-audit:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - bh-core-db
+    volumes:
+      - ./bh-core:/app
+      - /app/node_modules
+    networks:
+      - bh-network
+
+  # ================================
+  # Servicio bh-audit
+  # ================================
+  bh-audit:
+    build:
+      context: ./bh-audit
+      target: development
+    container_name: bh-audit
+    environment:
+      NODE_ENV: development
+      DB_HOST: bh-audit-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: bh_audit
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - bh-audit-db
+    volumes:
+      - ./bh-audit:/app
+      - /app/node_modules
+    networks:
+      - bh-network
+
+networks:
+  bh-network:
+    driver: bridge
+
+volumes:
+  bh-core-db-data:
+  bh-audit-db-data:
