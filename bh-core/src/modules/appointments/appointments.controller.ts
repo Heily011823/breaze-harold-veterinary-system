@@ -18,6 +18,11 @@ import {
  PreCreateAppointmentDto
 } from './dto/pre-create-appointment.dto';
 
+import {
+ ProcessPaymentDto
+}
+from './dto/process-payment.dto';
+
 @Controller('appointments')
 
 export class AppointmentsController {
@@ -77,6 +82,29 @@ export class AppointmentsController {
   .confirmPayment(
 
    id
+
+  );
+
+ }
+
+ @Post(
+
+ 'confirm-payment'
+
+)
+
+ confirmPaymentAndCreate(
+
+  @Body()
+
+  dto:ProcessPaymentDto
+
+ ){
+
+  return this.service
+  .createWithPayment(
+
+  dto
 
   );
 
