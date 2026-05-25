@@ -117,4 +117,18 @@ export class ProductsController {
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
   }
+
+  // Endpoint de prueba para la disminución automático del stock de un producto.
+  @ApiOperation({
+    summary:
+    'Automatically decrease product stock',
+  })
+  @Patch(':id/automatic-discount/:quantity')
+  automaticDiscount(
+  @Param('id') id: string,
+  @Param('quantity') quantity: string,
+  ) {
+      return this.productsService
+      .decreaseStockAutomatically(id, parseInt(quantity, 10), );
+    }
 }
