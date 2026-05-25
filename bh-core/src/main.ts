@@ -27,9 +27,13 @@ async function bootstrap() {
   // 🚀 SWAGGER CONFIG
   // ========================
   const config = new DocumentBuilder()
-    .setTitle('Veterinary System API')
-    .setDescription('API de historial clínico veterinario')
+    .setTitle('Breaze & Harold Veterinary System API')
+    .setDescription('API del sistema veterinario Breaze & Harold')
     .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'access-token',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
