@@ -1,5 +1,5 @@
 /// Autor: ChechoGc
-/// Historia: BH-5 - Aprobación manual de cuentas de personal
+/// Historia: BH-5, BH-6 - Aprobación manual de cuentas de personal y suspensión de cuentas
 
 import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import {
@@ -14,6 +14,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UsersService } from './users.service';
 import { RejectUserDto } from './dto/reject-user.dto';
+import { SuspendUserDto } from './dto/suspend-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
@@ -70,5 +71,29 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   rejectAccount(@Param('id') id: string, @Body() dto: RejectUserDto) {
     return this.usersService.rejectAccount(id, dto.reason);
+  }
+
+  @Patch(':id/suspend')
+  @ApiBody({ type: SuspendUserDto })
+  @ApiOperation({
+    summary: 'Suspender cuenta de usuario',
+    description: `Solo ADMIN. Cambia el estado de cualquier cuenta ACTIVE a SUSPENDED.
+
+**Escenario 1:** usuario activo → estado pasa a SUSPENDED, se registra evento USER_SUSPENDED en auditoría.
+**Escenario 2 (automático):** cualquier token JWT previo del usuario suspendido es rechazado con 401 en la siguiente petición.`,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cuenta suspendida — el usuario queda bloqueado de inmediato',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'El usuario no está en estado ACTIVE',
+  })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Rol sin permiso — solo ADMIN' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  suspendAccount(@Param('id') id: string, @Body() dto: SuspendUserDto) {
+    return this.usersService.suspendAccount(id, dto.reason);
   }
 }
