@@ -39,10 +39,8 @@ model User {
   phone     String?
   role      UserRole
   status    AccountStatus @default(PENDING_VERIFICATION)
-
   verificationCode          String?
   verificationCodeExpiresAt DateTime?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -67,11 +65,9 @@ model Product {
   unitPrice      Float
   expirationDate DateTime
   minimumStock   Int
-
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 enum InvoiceStatus {
@@ -87,51 +83,92 @@ enum InvoiceItemType {
 }
 
 model Invoice {
-  id String @id @default(uuid())
-
+  id            String        @id @default(uuid())
   appointmentId String?
   clientId      String?
   petId         String?
-
-  subtotal   Float
-  discount   Float @default(0)
-  paidAmount Float @default(0)
-  total      Float
-  balance    Float
-
-  status InvoiceStatus @default(PENDING)
-
+  subtotal      Float
+  discount      Float         @default(0)
+  paidAmount    Float         @default(0)
+  total         Float
+  balance       Float
+  status        InvoiceStatus @default(PENDING)
   cancellationReason String?
   cancelledAt        DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  items InvoiceItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         InvoiceItem[]
 }
 
 model InvoiceItem {
-  id String @id @default(uuid())
-
+  id          String          @id @default(uuid())
   invoiceId   String
   description String
   type        InvoiceItemType @default(OTHER)
   quantity    Int             @default(1)
   unitPrice   Float
   total       Float
-
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model Service {
   id          String   @id @default(uuid())
-
   name        String
   description String
   price       Float
-
   isActive    Boolean  @default(true)
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// HOSPITALIZATION - BH-25
+// Autor: milerickhenaor-alt
+// ==========================================
+
+model Hospitalization {
+  id             String                @id @default(uuid())
+  petId          String
+  veterinarianId String
+  reason         String
+  admissionDate  DateTime              @default(now())
+  dischargeDate  DateTime?
+  status         HospitalizationStatus @default(HOSPITALIZED)
+  exitCondition  ExitCondition?
+  notes          String?
+  evolutionNotes EvolutionNote[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([petId])
+  @@index([veterinarianId])
+}
+
+model EvolutionNote {
+  id                  String          @id @default(uuid())
+  hospitalizationId   String
+  hospitalization     Hospitalization @relation(fields: [hospitalizationId], references: [id], onDelete: Cascade)
+  veterinarianId      String
+  date                DateTime        @default(now())
+  temperature         Float?
+  heartRate           Int?
+  respiratoryRate     Int?
+  weight              Float?
+  clinicalObservation String
+  treatment           String
+  medications         String
+  createdAt           DateTime        @default(now())
+
+  @@index([hospitalizationId])
+}
+
+enum HospitalizationStatus {
+  HOSPITALIZED
+  DISCHARGED
+}
+
+enum ExitCondition {
+  RECOVERED
+  DECEASED
+  TRANSFERRED
 }
