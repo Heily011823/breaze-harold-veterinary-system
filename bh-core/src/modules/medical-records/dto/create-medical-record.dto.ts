@@ -15,9 +15,6 @@ export class CreateMedicalRecordDto {
   @IsUUID()
   petId!: string;
 
-  @IsUUID()
-  veterinarianId!: string;
-
   @IsString()
   @IsNotEmpty()
   visitReason!: string;

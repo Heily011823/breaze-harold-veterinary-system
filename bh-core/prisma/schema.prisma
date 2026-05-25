@@ -49,8 +49,19 @@ model User {
   @@map("users")
 }
 
+model Pet {
+  id            String   @id @default(uuid())
+  name          String
+  currentWeight Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  medicalRecords MedicalRecord[] @relation("PetMedicalRecords")
+}
+
 model MedicalRecord {
   id             String   @id @default(uuid())
+  pet            Pet      @relation("PetMedicalRecords", fields: [petId], references: [id])
   petId          String
   veterinarianId String
   visitReason    String
