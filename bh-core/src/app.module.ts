@@ -18,7 +18,7 @@ import { UsersModule } from './modules/users/users.module';
 import { TreatmentsModule } from './modules/treatments/treatments.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-
+import { VaccinesModule } from './modules/vaccines/vaccines.module';
 @Module({
   imports: [
     PrismaModule,
@@ -34,6 +34,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AppointmentsModule,
     UsersModule,
     TreatmentsModule,
+    VaccinesModule,
   ],
   controllers: [AppController],
   providers: [
