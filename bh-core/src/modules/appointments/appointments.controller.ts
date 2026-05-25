@@ -12,8 +12,12 @@ import {
  CreateAppointmentDto
 } from './dto/create-appointment.dto';
 
+import {
+ PreCreateAppointmentDto
+} from './dto/pre-create-appointment.dto';
+
 @Controller('appointments')
-export class AppointmentsController {
+export class AppointmentsController{
 
  constructor(
 
@@ -32,6 +36,21 @@ export class AppointmentsController {
  ){
 
   return this.service.create(
+   dto
+  );
+
+ }
+
+ @Post('pre-create')
+
+ preCreate(
+
+  @Body()
+  dto:PreCreateAppointmentDto
+
+ ){
+
+  return this.service.preCreate(
    dto
   );
 

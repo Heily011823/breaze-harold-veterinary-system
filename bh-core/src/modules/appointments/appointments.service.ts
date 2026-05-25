@@ -9,6 +9,9 @@ from '../../prisma/prisma.service';
 import { CreateAppointmentDto }
 from './dto/create-appointment.dto';
 
+import {PreCreateAppointmentDto}
+from './dto/pre-create-appointment.dto';
+
 @Injectable()
 export class AppointmentsService {
 
@@ -97,5 +100,71 @@ export class AppointmentsService {
    });
 
  }
+
+ async preCreate(
+
+   dto:PreCreateAppointmentDto
+
+  ){
+
+   const services =
+    await this.prisma.service.findMany({
+
+     where:{
+      id:{
+       in:dto.serviceIds
+      },
+      isActive:true
+     }
+
+    });
+
+   if(
+
+    services.length
+    !==
+    dto.serviceIds.length
+
+   ){
+
+    throw new BadRequestException(
+     'Hay servicios inactivos'
+    );
+
+   }
+
+   const total =
+    services.reduce(
+
+     (sum,item)=>
+
+     sum+
+      item.price,
+
+     0
+
+    );
+
+   return{
+
+    petId:
+     dto.petId,
+
+    veterinarianId:
+     dto.veterinarianId,
+
+    appointmentDate:
+     dto.appointmentDate,
+
+    services,
+
+    total,
+
+    status:
+     'READY_TO_CONFIRM'
+
+   };
+
+  }
 
 }
