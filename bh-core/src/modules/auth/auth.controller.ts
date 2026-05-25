@@ -1,5 +1,5 @@
 /// Autor: ChechoGc
-/// Historia: BH-1, BH-2, BH-4 - Registro base de usuarios, autenticación JWT y RBAC
+/// Historia: BH-1, BH-2, BH-3, BH-4 - Registro, autenticación JWT, verificación de correo y RBAC
 
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -7,6 +7,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Auth')
@@ -20,13 +21,39 @@ export class AuthController {
   @ApiOperation({
     summary: 'Registrar nuevo usuario',
     description:
-      'Crea una cuenta con estado PENDING_VERIFICATION. Los clientes pueden acceder tras verificar su correo. Recepcionistas y veterinarios también requieren aprobación del administrador.',
+      'Crea una cuenta con estado PENDING_VERIFICATION y envía un código de 6 dígitos al correo. Los clientes quedan activos tras verificar. Recepcionistas y veterinarios también requieren aprobación del administrador.',
   })
-  @ApiResponse({ status: 201, description: 'Cuenta creada exitosamente' })
+  @ApiResponse({
+    status: 201,
+    description: 'Cuenta creada — se envió el código de verificación al correo',
+  })
   @ApiResponse({ status: 409, description: 'El correo ya está registrado' })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verificar correo electrónico',
+    description: `Valida el código de 6 dígitos enviado al correo del usuario.
+
+**Escenario 1 — Cliente (CLIENT):** código válido → cuenta queda ACTIVE.
+**Escenario 2 — Personal (VETERINARIAN / RECEPTIONIST):** código válido → cuenta queda PENDING_APPROVAL (requiere aprobación de administrador).
+**Escenario 3 — Código inválido o expirado (>15 min):** devuelve 400 y mantiene el estado previo.`,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Correo verificado. El estado resultante depende del rol del usuario.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Código inválido, expirado, o cuenta ya verificada',
+  })
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
   }
 
   @Public()
