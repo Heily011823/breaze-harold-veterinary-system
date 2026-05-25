@@ -1,7 +1,10 @@
-/// Autor: milerickhenaor-alt
+﻿/// Autor: milerickhenaor-alt
 /// Version: 0.1
 /// Rama: BH-22-desarrollar-proceso-internacion-medica-mascotas
+<<<<<<< HEAD
 /// Rama: BH-23-implementar-registro-alta-egreso-clinico-paciente
+=======
+>>>>>>> develop
 
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -57,7 +60,6 @@ export class HospitalizationsService {
     });
   }
 
-develop
   async findOne(id: string) {
     const hospitalization = await this.prisma.hospitalization.findUnique({
       where: { id },

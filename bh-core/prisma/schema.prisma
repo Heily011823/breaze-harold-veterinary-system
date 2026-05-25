@@ -1,6 +1,6 @@
-/// Autor: Mateo Quintero
-/// Version: 0.1
-/// rama: 17-el registro de consultas
+// Autor: Mateo Quintero
+// Version: 0.1
+// rama: 17-el registro de consultas
 
 generator client {
   provider = "prisma-client-js"
@@ -11,11 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==========================================
-// AUTH - BH-1: Registro base de usuarios
-// Autor: ChechoGc
-// ==========================================
-
+// AUTH - BH-1
 enum UserRole {
   ADMIN
   RECEPTIONIST
@@ -31,18 +27,19 @@ enum AccountStatus {
 }
 
 model User {
-  id        String        @id @default(uuid())
-  email     String        @unique
-  password  String
-  firstName String
-  lastName  String
-  phone     String?
-  role      UserRole
-  status    AccountStatus @default(PENDING_VERIFICATION)
+  id                        String        @id @default(uuid())
+  email                     String        @unique
+  password                  String
+  firstName                 String
+  lastName                  String
+  phone                     String?
+  role                      UserRole
+  status                    AccountStatus @default(PENDING_VERIFICATION)
   verificationCode          String?
   verificationCodeExpiresAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  client                    Client?
 
   @@map("users")
 }
@@ -83,21 +80,21 @@ enum InvoiceItemType {
 }
 
 model Invoice {
-  id            String        @id @default(uuid())
-  appointmentId String?
-  clientId      String?
-  petId         String?
-  subtotal      Float
-  discount      Float         @default(0)
-  paidAmount    Float         @default(0)
-  total         Float
-  balance       Float
-  status        InvoiceStatus @default(PENDING)
+  id                 String        @id @default(uuid())
+  appointmentId      String?
+  clientId           String?
+  petId              String?
+  subtotal           Float
+  discount           Float         @default(0)
+  paidAmount         Float         @default(0)
+  total              Float
+  balance            Float
+  status             InvoiceStatus @default(PENDING)
   cancellationReason String?
   cancelledAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  items         InvoiceItem[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  items              InvoiceItem[]
 }
 
 model InvoiceItem {
@@ -165,11 +162,7 @@ model AppointmentService {
 
 }
 
-// ==========================================
-// HOSPITALIZATION - BH-25
-// Autor: milerickhenaor-alt
-// ==========================================
-
+// HOSPITALIZATION - BH-25 - Autor: milerickhenaor-alt
 model Hospitalization {
   id             String                @id @default(uuid())
   petId          String
@@ -215,4 +208,47 @@ enum ExitCondition {
   RECOVERED
   DECEASED
   TRANSFERRED
+}
+
+// CLIENTS - BH-7 - Autor: Jacobo
+model Client {
+  id             String   @id @default(uuid())
+  userId         String?  @unique
+  user           User?    @relation(fields: [userId], references: [id])
+  firstName      String
+  lastName       String
+  email          String   @unique
+  phoneNumber    String
+  documentNumber String   @unique
+  address        String?
+  city           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  pets           Pet[]
+
+  @@map("clients")
+}
+
+// PETS - BH-8/BH-9 - Autor: Jacobo
+enum PetStatus {
+  ACTIVE
+  HOSPITALIZED
+  DECEASED
+}
+
+model Pet {
+  id        String    @id @default(uuid())
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id])
+  name      String
+  species   String
+  breed     String
+  color     String
+  birthDate DateTime
+  weight    Float
+  status    PetStatus @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("pets")
 }

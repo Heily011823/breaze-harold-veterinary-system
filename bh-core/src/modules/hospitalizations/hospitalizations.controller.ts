@@ -1,4 +1,4 @@
-/// Autor: milerickhenaor-alt
+﻿/// Autor: milerickhenaor-alt
 /// Version: 0.1
 /// Rama: BH-22-desarrollar-proceso-internacion-medica-mascotas
 
@@ -20,6 +20,10 @@ export class HospitalizationsController {
   discharge(@Param('id') id: string, @Body() dto: DischargeHospitalizationDto) {
     return this.hospitalizationsService.discharge(id, dto);
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> develop
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.hospitalizationsService.findOne(id);
