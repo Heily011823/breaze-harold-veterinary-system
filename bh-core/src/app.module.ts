@@ -11,11 +11,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { ServicesModule } from './modules/services/services.module';
-<<<<<<< HEAD
-import { AuthModule } from './modules/auth/auth.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
-=======
->>>>>>> develop
 
 @Module({
   imports: [

@@ -1,10 +1,7 @@
 ﻿/// Autor: milerickhenaor-alt
 /// Version: 0.1
 /// Rama: BH-22-desarrollar-proceso-internacion-medica-mascotas
-<<<<<<< HEAD
-/// Rama: BH-23-implementar-registro-alta-egreso-clinico-paciente
-=======
->>>>>>> develop
+
 
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
