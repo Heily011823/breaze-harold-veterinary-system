@@ -9,6 +9,7 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { ServicesModule } from './modules/services/services.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AppointmentsModule } from './modules/appointments/appointments.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthModule } from './modules/auth/auth.module';
     InvoicesModule,
     ReportsModule,
     ServicesModule,
+    AppointmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,15 +1,12 @@
 /// Autor: milerickhenaor-alt
 /// Version: 0.1
-feature/BH-22-desarrollar-proceso-internacion-medica-mascotas
 /// Rama: BH-22-desarrollar-proceso-internacion-medica-mascotas
 /// Rama: BH-23-implementar-registro-alta-egreso-clinico-paciente
-develop
 
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateHospitalizationDto } from './dto/create-hospitalization.dto';
-feature/BH-22-desarrollar-proceso-internacion-medica-mascotas
-import { DischargeHospitalizationDto } from './dto/discharge-hospitalization.dto'; develop
+import { DischargeHospitalizationDto } from './dto/discharge-hospitalization.dto';
 
 @Injectable()
 export class HospitalizationsService {
@@ -37,7 +34,6 @@ export class HospitalizationsService {
     });
   }
 
-feature/BH-22-desarrollar-proceso-internacion-medica-mascotas
   async discharge(id: string, dto: DischargeHospitalizationDto) {
     const hospitalization = await this.prisma.hospitalization.findUnique({
       where: { id },
