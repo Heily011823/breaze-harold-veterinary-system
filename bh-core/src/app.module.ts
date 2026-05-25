@@ -6,11 +6,13 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './modules/products/products.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
-    MedicalRecordsModule,
     PrismaModule,
+    AuthModule,
+    MedicalRecordsModule,
     ProductsModule,
     InvoicesModule,
     ReportsModule,
