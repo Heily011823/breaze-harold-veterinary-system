@@ -15,7 +15,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { ServicesModule } from './modules/services/services.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { UsersModule } from './modules/users/users.module';
-
+import { TreatmentsModule } from './modules/treatments/treatments.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -33,6 +33,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     ServicesModule,
     AppointmentsModule,
     UsersModule,
+    TreatmentsModule,
   ],
   controllers: [AppController],
   providers: [

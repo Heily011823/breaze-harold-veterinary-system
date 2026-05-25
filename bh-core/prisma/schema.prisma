@@ -67,6 +67,26 @@ model Treatment {
   @@index([medicalRecordId])
 }
 
+
+model Vaccine {
+  id              String   @id @default(uuid())
+  vaccineName     String   // Nombre de la vacuna (ej. "Rabia", "Parvovirus")
+  applicationDate DateTime // Fecha de aplicación (normalmente hoy)
+  nextDueDate     DateTime // Fecha límite para el refuerzo
+  medicalRecordId String   // Relación con el historial médico
+  petId           String   // Redundancia para consultas eficientes de alertas
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  pet           Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([nextDueDate])
+  @@index([petId])
+  @@index([medicalRecordId])
+}
+
+
 model Product {
   id             String   @id @default(uuid())
   name           String
