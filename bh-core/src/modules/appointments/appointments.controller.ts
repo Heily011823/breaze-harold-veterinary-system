@@ -20,8 +20,11 @@ import {
 
 import {
  ProcessPaymentDto
-}
-from './dto/process-payment.dto';
+} from './dto/process-payment.dto';
+
+import {
+ CancelAppointmentDto
+} from './dto/cancel-appointment.dto';
 
 @Controller('appointments')
 
@@ -39,6 +42,7 @@ export class AppointmentsController {
  create(
 
   @Body()
+
   dto:CreateAppointmentDto
 
  ){
@@ -56,6 +60,7 @@ export class AppointmentsController {
  preCreate(
 
   @Body()
+
   dto:PreCreateAppointmentDto
 
  ){
@@ -68,7 +73,34 @@ export class AppointmentsController {
 
  }
 
- @Patch(':id/payment')
+ @Post(
+
+  'confirm-payment'
+
+ )
+
+ confirmPaymentAndCreate(
+
+  @Body()
+
+  dto:ProcessPaymentDto
+
+ ){
+
+  return this.service
+  .createWithPayment(
+
+   dto
+
+  );
+
+ }
+
+ @Patch(
+
+  ':id/payment'
+
+ )
 
  confirmPayment(
 
@@ -87,24 +119,30 @@ export class AppointmentsController {
 
  }
 
- @Post(
+ @Patch(
 
- 'confirm-payment'
+  ':id/cancel'
 
-)
+ )
 
- confirmPaymentAndCreate(
+ cancelAppointment(
+
+  @Param('id')
+
+  id:string,
 
   @Body()
 
-  dto:ProcessPaymentDto
+  dto:CancelAppointmentDto
 
  ){
 
   return this.service
-  .createWithPayment(
+  .cancelAppointment(
 
-  dto
+   id,
+
+   dto
 
   );
 
