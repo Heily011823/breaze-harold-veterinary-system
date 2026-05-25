@@ -7,6 +7,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { ServicesModule } from './modules/services/services.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AuthModule } from './modules/auth/auth.module';
 
@@ -19,6 +20,12 @@ import { AuthModule } from './modules/auth/auth.module';
     ProductsModule,
     InvoicesModule,
     ReportsModule,
+    EventEmitterModule.forRoot({
+      wildcard: false,   // Opcional: configuración por si la necesitas
+      delimiter: '.',
+      maxListeners: 10,
+    }),
+    MedicalRecordsModule,
     ServicesModule,
   ],
   controllers: [AppController],

@@ -1,17 +1,19 @@
+// src/modules/medical-records/medical-records.module.ts
+/// Autor:  Mateo Quintero
+/// Version: 0.1
+/// rama: Bh-17
+
 import { Module } from '@nestjs/common';
-
-import { PrismaModule } from '../../prisma/prisma.module';
-
 import { MedicalRecordsController } from './medical-records.controller';
 import { MedicalRecordsService } from './medical-records.service';
-
-/// Autor: Mateo Quintero
-/// Version: 0.1
-/// rama: 17-el registro de consultas
+import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [
+    PrismaModule,      
+  ],
   controllers: [MedicalRecordsController],
   providers: [MedicalRecordsService],
+  exports: [MedicalRecordsService],
 })
 export class MedicalRecordsModule {}
