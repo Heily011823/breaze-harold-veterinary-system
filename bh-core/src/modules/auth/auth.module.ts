@@ -1,17 +1,29 @@
 /// Autor: ChechoGc
-/// Historia: BH-1 - Registro base de usuarios
+/// Historia: BH-1, BH-2 - Registro base de usuarios y autenticación JWT
 
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
-  imports: [PrismaModule, HttpModule],
+  imports: [
+    PrismaModule,
+    HttpModule,
+    PassportModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET ?? 'jwt-secret-fallback',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN ?? '8h') as any },
+    }),
+  ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
