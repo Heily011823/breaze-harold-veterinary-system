@@ -12,6 +12,9 @@ from './dto/create-appointment.dto';
 import { PreCreateAppointmentDto }
 from './dto/pre-create-appointment.dto';
 
+import { ProcessPaymentDto }
+from './dto/process-payment.dto';
+
 import { AppointmentStatus }
 from '@prisma/client';
 
@@ -44,38 +47,76 @@ export class AppointmentsService {
 
  ){
 
-  const appointmentDate =
-   new Date(
+  throw new BadRequestException(
 
-    dto.appointmentDate
+   'Debe procesar el pago antes de crear la cita'
+
+  );
+
+ }
+
+ async createWithPayment(
+
+  dto:ProcessPaymentDto
+
+ ){
+
+  const paymentOk =
+
+  await this.validatePayment(
+
+   dto.transactionId
+
+  );
+
+  if(
+
+   !paymentOk
+
+  ){
+
+   throw new BadRequestException(
+
+    'Pago obligatorio para crear cita'
 
    );
 
+  }
+
+  const appointmentDate =
+
+  new Date(
+
+   dto.appointmentDate
+
+  );
+
   const existingAppointment =
-   await this.prisma.appointment.findFirst({
 
-    where:{
+  await this.prisma
+  .appointment
+  .findFirst({
 
-     veterinarianId:
-      dto.veterinarianId,
+   where:{
 
-     appointmentDate,
+    veterinarianId:
+    dto.veterinarianId,
 
-     status:{
+    appointmentDate,
 
-      in:[
+    status:{
 
-       AppointmentStatus.CONFIRMED,
+     in:[
 
-       AppointmentStatus.PENDING_PAYMENT
+      AppointmentStatus.CONFIRMED
 
-      ]
-
-     }
+     ]
 
     }
 
-   });
+   }
+
+  });
 
   if(
 
@@ -85,28 +126,31 @@ export class AppointmentsService {
 
    throw new BadRequestException(
 
-    'El veterinario ya tiene una cita en ese horario'
+    'Horario ocupado'
 
    );
 
   }
 
   const services =
-   await this.prisma.service.findMany({
 
-    where:{
+  await this.prisma
+  .service
+  .findMany({
 
-     id:{
+   where:{
 
-      in:dto.serviceIds
+    id:{
 
-     },
+     in:dto.serviceIds
 
-     isActive:true
+    },
 
-    }
+    isActive:true
 
-   });
+   }
+
+  });
 
   if(
 
@@ -118,27 +162,30 @@ export class AppointmentsService {
 
    throw new BadRequestException(
 
-    'Hay servicios inactivos'
+    'Hay servicios inválidos'
 
    );
 
   }
 
   const total =
-   services.reduce(
 
-    (sum,item)=>
+  services.reduce(
 
-     sum+
-     item.price,
+   (sum,item)=>
 
-    0
+   sum+
+   item.price,
 
-   );
+   0
+
+  );
 
   const appointment =
 
-  await this.prisma.appointment.create({
+  await this.prisma
+  .appointment
+  .create({
 
    data:{
 
@@ -154,7 +201,7 @@ export class AppointmentsService {
 
     status:
     AppointmentStatus
-    .PENDING_PAYMENT,
+    .CONFIRMED,
 
     services:{
 
@@ -176,6 +223,18 @@ export class AppointmentsService {
 
    include:{
 
+    pet:{
+
+     include:{
+
+      client:true
+
+     }
+
+    },
+
+    veterinarian:true,
+
     services:true
 
    }
@@ -184,9 +243,23 @@ export class AppointmentsService {
 
   await this.notifyAudit(
 
+   'Pago procesado',
+
+   appointment.id
+
+  );
+
+  await this.notifyAudit(
+
    'Creación de cita',
 
    appointment.id
+
+  );
+
+  await this.sendAppointmentEmail(
+
+   appointment
 
   );
 
@@ -200,9 +273,9 @@ export class AppointmentsService {
 
  ){
 
-  const appointment =
-
-  await this.prisma.appointment.update({
+  return this.prisma
+  .appointment
+  .update({
 
    where:{
 
@@ -213,43 +286,34 @@ export class AppointmentsService {
    data:{
 
     status:
-    AppointmentStatus.CONFIRMED
-
-   },
-
-   include:{
-
-    pet:{
-
-     include:{
-
-      client:true
-
-     }
-
-    },
-
-    veterinarian:true
+    AppointmentStatus
+    .CONFIRMED
 
    }
 
   });
 
-  await this.notifyAudit(
+ }
 
-   'Pago de cita registrado',
+ private async validatePayment(
 
-   appointment.id
+  transactionId:string
 
-  );
+ ){
 
-  await this.sendAppointmentEmail(
+  if(
 
-   appointment
+   !transactionId ||
 
-  );
+   transactionId.trim()===''
 
-  return appointment;
+  ){
+
+   return false;
+
+  }
+
+  return true;
 
  }
 
@@ -295,9 +359,9 @@ export class AppointmentsService {
 
   }catch(error){
 
-   console.error(
+   console.log(
 
-    'Error notificando auditoría'
+    'Error auditoría'
 
    );
 
@@ -365,7 +429,10 @@ export class AppointmentsService {
  ){
 
   const services =
-  await this.prisma.service.findMany({
+
+  await this.prisma
+  .service
+  .findMany({
 
    where:{
 
@@ -380,22 +447,6 @@ export class AppointmentsService {
    }
 
   });
-
-  if(
-
-   services.length
-   !==
-   dto.serviceIds.length
-
-  ){
-
-   throw new BadRequestException(
-
-    'Hay servicios inactivos'
-
-   );
-
-  }
 
   const total =
 
@@ -427,7 +478,7 @@ export class AppointmentsService {
 
    status:
 
-   'READY_TO_CONFIRM'
+   'READY_TO_PAY'
 
   };
 
