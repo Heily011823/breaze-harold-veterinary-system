@@ -11,6 +11,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// AUTH - BH-1: Registro base de usuarios
+// Autor: ChechoGc
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  RECEPTIONIST
+  VETERINARIAN
+  CLIENT
+}
+
+enum AccountStatus {
+  PENDING_VERIFICATION
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id        String        @id @default(uuid())
+  email     String        @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole
+  status    AccountStatus @default(PENDING_VERIFICATION)
+
+  verificationCode          String?
+  verificationCodeExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
 model MedicalRecord {
   id             String   @id @default(uuid())
   petId          String
