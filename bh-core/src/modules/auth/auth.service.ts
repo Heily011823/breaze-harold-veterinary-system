@@ -1,7 +1,8 @@
 /// Autor: ChechoGc
-/// Historia: BH-1, BH-2 - Registro base de usuarios y autenticación JWT
+/// Historia: BH-1, BH-2, BH-3 - Registro, autenticación JWT y verificación de correo
 
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -16,8 +17,11 @@ import { AccountStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { EmailService } from './email/email.service';
 
 const BCRYPT_SALT_ROUNDS = 10;
+const VERIFICATION_CODE_TTL_MS = 15 * 60 * 1000; // 15 minutos
 
 const ACCOUNT_STATUS_MESSAGES: Record<AccountStatus, string> = {
   PENDING_VERIFICATION:
@@ -28,7 +32,11 @@ const ACCOUNT_STATUS_MESSAGES: Record<AccountStatus, string> = {
   SUSPENDED: 'Tu cuenta ha sido suspendida. Contacta al administrador.',
 };
 
-type AuditActionType = 'USER_REGISTERED' | 'LOGIN_SUCCESS' | 'LOGIN_FAILED';
+type AuditActionType =
+  | 'USER_REGISTERED'
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILED'
+  | 'EMAIL_VERIFIED';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +44,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -51,6 +60,13 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
 
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+    const verificationCodeExpiresAt = new Date(
+      Date.now() + VERIFICATION_CODE_TTL_MS,
+    );
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -59,6 +75,8 @@ export class AuthService {
         lastName: dto.lastName,
         phone: dto.phone,
         role: dto.role,
+        verificationCode,
+        verificationCodeExpiresAt,
       },
       select: {
         id: true,
@@ -80,11 +98,78 @@ export class AuthService {
       description: `Nueva cuenta registrada para ${user.firstName} ${user.lastName} con rol ${user.role}`,
     });
 
+    // Fire-and-forget: el fallo del correo no interrumpe el registro
+    void this.emailService.sendVerificationCode(
+      user.email,
+      user.firstName,
+      verificationCode,
+    );
+
     return {
       message:
-        'Cuenta creada exitosamente. Por favor verifica tu correo electrónico para activarla.',
+        'Cuenta creada exitosamente. Hemos enviado un código de verificación a tu correo electrónico.',
       user,
     };
+  }
+
+  async verifyEmail(dto: VerifyEmailDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new BadRequestException(
+        'Código de verificación inválido o expirado',
+      );
+    }
+
+    if (user.status !== AccountStatus.PENDING_VERIFICATION) {
+      throw new BadRequestException(
+        'Tu cuenta ya fue verificada o no requiere verificación en este momento',
+      );
+    }
+
+    // Escenario 3: código incorrecto o expirado
+    const codeExpired =
+      !user.verificationCodeExpiresAt ||
+      user.verificationCodeExpiresAt < new Date();
+    const codeInvalid = user.verificationCode !== dto.code;
+
+    if (codeInvalid || codeExpired) {
+      throw new BadRequestException(
+        'Código de verificación inválido o expirado',
+      );
+    }
+
+    // Escenario 1 (CLIENT) → ACTIVE | Escenario 2 (STAFF) → PENDING_APPROVAL
+    const newStatus =
+      user.role === UserRole.CLIENT
+        ? AccountStatus.ACTIVE
+        : AccountStatus.PENDING_APPROVAL;
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        status: newStatus,
+        verificationCode: null,
+        verificationCodeExpiresAt: null,
+      },
+    });
+
+    await this.notifyAudit({
+      actionType: 'EMAIL_VERIFIED',
+      userId: user.id,
+      userFullName: `${user.firstName} ${user.lastName}`,
+      userRole: user.role,
+      description: `Correo verificado para ${user.firstName} ${user.lastName} (${user.email})`,
+    });
+
+    const message =
+      newStatus === AccountStatus.ACTIVE
+        ? 'Correo verificado exitosamente. Tu cuenta está activa. Ya puedes iniciar sesión.'
+        : 'Correo verificado exitosamente. Tu cuenta está pendiente de aprobación por un administrador.';
+
+    return { message, status: newStatus };
   }
 
   async login(dto: LoginDto) {

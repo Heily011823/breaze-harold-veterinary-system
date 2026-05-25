@@ -1,11 +1,12 @@
 /// Autor: Mateo Quintero
-/// Historia: BH-17 (registro de consultas) + BH-4 (RBAC)
-/// Versión: 2.0
+/// Historia: BH-17 (registro de consultas) + BH-11 (historial) + BH-4 (RBAC)
+/// Versión: 3.0
 
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -37,5 +38,45 @@ export class MedicalRecordsController {
   })
   create(@Body() dto: CreateMedicalRecordDto) {
     return this.medicalRecordsService.create(dto);
+  }
+
+  @Get('pet/:petId')
+  @Roles(UserRole.VETERINARIAN, UserRole.ADMIN, UserRole.RECEPTIONIST)
+  @ApiOperation({
+    summary: 'Obtener historial médico de una mascota',
+    description: 'VETERINARIAN, ADMIN y RECEPTIONIST.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Historial médico paginado, ordenado cronológicamente',
+  })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Rol sin permiso' })
+  findByPet(
+    @Param('petId') petId: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.medicalRecordsService.findByPet(
+      petId,
+      page ? parseInt(page) : 1,
+      pageSize ? parseInt(pageSize) : 20,
+    );
+  }
+
+  @Get(':id')
+  @Roles(UserRole.VETERINARIAN, UserRole.ADMIN, UserRole.RECEPTIONIST)
+  @ApiOperation({
+    summary: 'Obtener registro médico por ID',
+    description: 'VETERINARIAN, ADMIN y RECEPTIONIST.',
+  })
+  @ApiResponse({ status: 200, description: 'Registro médico completo' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Rol sin permiso' })
+  @ApiResponse({ status: 404, description: 'Registro no encontrado' })
+  findOne(@Param('id') id: string) {
+    return this.medicalRecordsService.findOne(id);
   }
 }

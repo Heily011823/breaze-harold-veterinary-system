@@ -1,5 +1,5 @@
 /// Autor: ChechoGc
-/// Historia: BH-1, BH-2 - Registro base de usuarios y autenticación JWT
+/// Historia: BH-1, BH-2, BH-3 - Registro, autenticación JWT y verificación de correo
 
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
@@ -10,6 +10,7 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { EmailService } from './email/email.service';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, EmailService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
