@@ -1,7 +1,7 @@
 /// Autor: ChechoGc
 /// Historia: BH-5, BH-6 - Aprobación manual de cuentas de personal y suspensión de cuentas
 
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -95,5 +95,22 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   suspendAccount(@Param('id') id: string, @Body() dto: SuspendUserDto) {
     return this.usersService.suspendAccount(id, dto.reason);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Eliminar usuario',
+    description:
+      'Solo ADMIN. Elimina permanentemente un usuario de la base de datos. No se puede eliminar cuentas ADMIN ni usuarios con citas u otros registros asociados — en ese caso, usa PATCH /users/:id/suspend.',
+  })
+  @ApiResponse({ status: 200, description: 'Usuario eliminado correctamente' })
+  @ApiResponse({ status: 400, description: 'No se puede eliminar una cuenta de administrador' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Rol sin permiso — solo ADMIN' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 409, description: 'El usuario tiene registros asociados — suspéndelo en su lugar' })
+  deleteUser(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
   }
 }

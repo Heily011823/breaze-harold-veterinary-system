@@ -3,9 +3,11 @@
 
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { HttpService } from '@nestjs/axios';
 import { AccountStatus, UserRole } from '@prisma/client';
 import { firstValueFrom } from 'rxjs';
@@ -139,6 +141,31 @@ export class UsersService {
       message: `Cuenta de ${updated.firstName} ${updated.lastName} suspendida correctamente`,
       user: updated,
     };
+  }
+
+  async deleteUser(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      throw new BadRequestException('No se puede eliminar una cuenta de administrador');
+    }
+
+    try {
+      await this.prisma.user.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new ConflictException(
+          'No se puede eliminar el usuario porque tiene registros asociados (citas, facturas u otros). Suspéndelo en su lugar.',
+        );
+      }
+      throw error;
+    }
+
+    return { message: `Usuario ${user.firstName} ${user.lastName} eliminado correctamente` };
   }
 
   private async findUserPendingApproval(id: string) {
