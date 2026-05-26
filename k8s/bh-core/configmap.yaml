@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bh-core-config
+  namespace: default
+data:
+  NODE_ENV: "production"
+  DB_HOST: "bh-core-db-service"
+  DB_PORT: "5432"
+  DB_NAME: "bh_core"
+  PORT: "3000"
+  BH_AUDIT_URL: "http://bh-audit-service:3001"

@@ -1,0 +1,113 @@
+name: CI — Integración Continua
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'bugfix/**'
+      - develop
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  # ================================
+  # Job 1: Build y Test bh-audit
+  # ================================
+  build-bh-audit:
+    name: Build y Test bh-audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: bh-audit/package-lock.json
+
+      - name: Instalar dependencias bh-audit
+        working-directory: bh-audit
+        run: npm ci
+
+      - name: Compilar bh-audit
+        working-directory: bh-audit
+        run: npm run build
+
+      - name: Ejecutar tests bh-audit
+        working-directory: bh-audit
+        run: npm run test --if-present
+
+  # ================================
+  # Job 2: Build y Test bh-core
+  # ================================
+  build-bh-core:
+    name: Build y Test bh-core
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: bh-core/package-lock.json
+
+      - name: Verificar si bh-core existe
+        id: check-core
+        run: |
+          if [ -f "bh-core/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Instalar dependencias bh-core
+        if: steps.check-core.outputs.exists == 'true'
+        working-directory: bh-core
+        run: npm ci
+
+      - name: Compilar bh-core
+        if: steps.check-core.outputs.exists == 'true'
+        working-directory: bh-core
+        run: npm run build
+
+      - name: Ejecutar tests bh-core
+        if: steps.check-core.outputs.exists == 'true'
+        working-directory: bh-core
+        run: npm run test --if-present
+
+  # ================================
+  # Job 3: Validar manifiestos Kubernetes
+  # ================================
+  validate-k8s:
+    name: Validar manifiestos Kubernetes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar kubeconform
+        run: |
+          curl -L -o kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Validar manifiestos Kubernetes
+        run: |
+          if [ -d "k8s" ]; then
+            find k8s -type f \( -name "*.yaml" -o -name "*.yml" \) -print
+            find k8s -type f \( -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 kubeconform -summary -ignore-missing-schemas
+          else
+            echo "No existe la carpeta k8s"
+            exit 1
+          fi
